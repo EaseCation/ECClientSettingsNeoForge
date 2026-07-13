@@ -13,12 +13,18 @@ public final class ClientSettingsKeyMappings {
             GLFW.GLFW_KEY_HOME,
             "key.categories.ecclientsettings"
     );
+    public static final KeyMapping TOGGLE_FORCE_SPRINT = new KeyMapping(
+            "key.ecclientsettings.toggle_force_sprint",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_I,
+            "key.categories.ecclientsettings"
+    );
 
     private ClientSettingsKeyMappings() {
     }
 
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(OPEN_SETTINGS);
+        event.register(TOGGLE_FORCE_SPRINT);
     }
 }
-

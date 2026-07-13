@@ -25,5 +25,9 @@ public final class ClientSettingsConfig {
     public static boolean forceSprint() {
         return FORCE_SPRINT.get();
     }
-}
 
+    public static void setForceSprint(boolean enabled) {
+        FORCE_SPRINT.set(enabled);
+        SPEC.save();
+    }
+}

@@ -2,7 +2,10 @@ package net.easecation.clientsettings.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.easecation.clientsettings.ECClientSettings;
+import net.easecation.clientsettings.config.ClientSettingsConfig;
+import net.easecation.clientsettings.movement.ForceSprintToggle;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.network.chat.Component;
@@ -19,9 +22,30 @@ public final class ClientSettingsEvents {
 
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.screen == null && ClientSettingsKeyMappings.OPEN_SETTINGS.consumeClick()) {
-            minecraft.setScreen(ClientSettingsScreen.create(null));
+        if (minecraft.screen != null) {
+            return;
         }
+
+        if (ClientSettingsKeyMappings.OPEN_SETTINGS.consumeClick()) {
+            minecraft.setScreen(ClientSettingsScreen.create(null));
+            return;
+        }
+
+        LocalPlayer player = minecraft.player;
+        if (player == null || minecraft.level == null
+                || !ClientSettingsKeyMappings.TOGGLE_FORCE_SPRINT.consumeClick()) {
+            return;
+        }
+
+        boolean enabled = ForceSprintToggle.toggle(
+                ClientSettingsConfig.forceSprint(),
+                ClientSettingsConfig::setForceSprint,
+                () -> player.setSprinting(false)
+        );
+        String messageKey = enabled
+                ? "message.ecclientsettings.force_sprint.enabled"
+                : "message.ecclientsettings.force_sprint.disabled";
+        player.displayClientMessage(Component.translatable(messageKey), false);
     }
 
     public static void onScreenKeyPressed(ScreenEvent.KeyPressed.Pre event) {
@@ -66,7 +90,7 @@ public final class ClientSettingsEvents {
                         SETTINGS_BUTTON,
                         button -> Minecraft.getInstance().setScreen(ClientSettingsScreen.create(pauseScreen))
                 )
-                .bounds(modsButton.getX() + 102, modsButton.getY(), 98, 20)
+                .bounds(modsButton.getX() + 106, modsButton.getY(), 98, 20)
                 .build());
     }
 }

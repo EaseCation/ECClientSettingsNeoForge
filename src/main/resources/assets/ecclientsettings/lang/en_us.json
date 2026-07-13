@@ -3,6 +3,9 @@
   "category.ecclientsettings.default": "Default Settings",
   "key.categories.ecclientsettings": "EaseCation Client Settings",
   "key.ecclientsettings.open_settings": "Open Client Settings",
+  "key.ecclientsettings.toggle_force_sprint": "Toggle Force Sprint",
+  "message.ecclientsettings.force_sprint.disabled": "Force sprint disabled",
+  "message.ecclientsettings.force_sprint.enabled": "Force sprint enabled",
   "option.ecclientsettings.force_sprint": "Force Sprint",
   "option.ecclientsettings.force_sprint.tooltip": "Automatically attempts to sprint while moving forward and still follows vanilla sprint restrictions.",
   "screen.ecclientsettings.title": "EaseCation Client Settings"
