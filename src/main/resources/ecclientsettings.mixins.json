@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "net.easecation.clientsettings.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "client": [
+    "KeyboardInputMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
+

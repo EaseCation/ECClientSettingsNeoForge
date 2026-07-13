@@ -1,0 +1,9 @@
+{
+  "button.ecclientsettings.open": "Client Settings",
+  "category.ecclientsettings.default": "Default Settings",
+  "key.categories.ecclientsettings": "EaseCation Client Settings",
+  "key.ecclientsettings.open_settings": "Open Client Settings",
+  "option.ecclientsettings.force_sprint": "Force Sprint",
+  "option.ecclientsettings.force_sprint.tooltip": "Automatically attempts to sprint while moving forward and still follows vanilla sprint restrictions.",
+  "screen.ecclientsettings.title": "EaseCation Client Settings"
+}

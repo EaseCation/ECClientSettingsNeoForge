@@ -1,0 +1,10 @@
+{
+  "button.ecclientsettings.open": "客户端设置",
+  "category.ecclientsettings.default": "默认设置",
+  "key.categories.ecclientsettings": "EaseCation 客户端设置",
+  "key.ecclientsettings.open_settings": "打开客户端设置",
+  "option.ecclientsettings.force_sprint": "强制疾跑",
+  "option.ecclientsettings.force_sprint.tooltip": "持续向前移动时自动尝试疾跑，仍遵守原版疾跑限制。",
+  "screen.ecclientsettings.title": "EaseCation 客户端设置"
+}
+
