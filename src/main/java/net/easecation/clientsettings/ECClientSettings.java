@@ -3,6 +3,7 @@ package net.easecation.clientsettings;
 import net.easecation.clientsettings.client.ClientSettingsEvents;
 import net.easecation.clientsettings.client.ClientSettingsKeyMappings;
 import net.easecation.clientsettings.config.ClientSettingsConfig;
+import net.easecation.clientsettings.window.WindowAppearanceEvents;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -25,6 +26,8 @@ public final class ECClientSettings {
         NeoForge.EVENT_BUS.addListener(ClientSettingsEvents::onClientTick);
         NeoForge.EVENT_BUS.addListener(ClientSettingsEvents::onScreenKeyPressed);
         NeoForge.EVENT_BUS.addListener(ClientSettingsEvents::onScreenInit);
+        NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onModEvent);
+        NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onDisconnected);
 
         LOGGER.info("EaseCation client settings initialized");
     }

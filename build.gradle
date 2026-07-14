@@ -20,6 +20,9 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 dependencies {
     implementation "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}"
+    implementation "net.easecation:netease-bridge-client-neoforge:1.0.0"
+    implementation "net.easecation:netease-bridge-client-common:1.0.0"
+    implementation "org.msgpack:msgpack-core:0.9.8"
 
     testImplementation platform('org.junit:junit-bom:5.12.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
