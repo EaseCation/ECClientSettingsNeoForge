@@ -7,6 +7,7 @@
   "key.ecclientsettings.toggle_force_sprint": "切换强制疾跑",
   "message.ecclientsettings.force_sprint.disabled": "强制疾跑已关闭",
   "message.ecclientsettings.force_sprint.enabled": "强制疾跑已开启",
+  "message.ecclientsettings.force_sprint.save_failed": "强制疾跑保存失败，已继续使用原设置",
   "option.ecclientsettings.force_sprint": "强制疾跑",
   "option.ecclientsettings.force_sprint.tooltip": "持续向前移动时自动尝试疾跑，仍遵守原版疾跑限制。",
   "option.ecclientsettings.server_window_frame": "允许服务器修改标题栏颜色",
