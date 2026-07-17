@@ -5,10 +5,10 @@
   "mixins": [],
   "client": [
     "KeyboardInputMixin",
-    "MinecraftTitleMixin"
+    "MinecraftTitleMixin",
+    "render.ScreenEffectRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1
   }
 }
-

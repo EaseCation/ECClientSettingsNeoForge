@@ -6,6 +6,7 @@ import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.easecation.clientsettings.ECClientSettings;
 import net.easecation.clientsettings.config.ClientSettingsConfig;
 import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
+import net.easecation.clientsettings.profile.model.LowFireSettings;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 import net.easecation.clientsettings.profile.runtime.ProfileServices;
 import net.easecation.clientsettings.window.WindowAppearanceController;
@@ -172,6 +173,24 @@ public final class ClientSettingsScreen {
                 .setDefaultValue(BlockOutlineSettings.DEFAULT.color().value())
                 .setTooltip(Component.translatable("option.ecclientsettings.block_outline.color.tooltip"))
                 .setSaveConsumer(draft::setBlockOutlineColor)
+                .build());
+        category.addEntry(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.low_fire.enabled"),
+                        draft.features().lowFire().enabled()
+                )
+                .setDefaultValue(false)
+                .setTooltip(Component.translatable("option.ecclientsettings.low_fire.enabled.tooltip"))
+                .setSaveConsumer(draft::setLowFireEnabled)
+                .build());
+        category.addEntry(entries.startDoubleField(
+                        Component.translatable("option.ecclientsettings.low_fire.offset"),
+                        draft.features().lowFire().verticalOffset()
+                )
+                .setDefaultValue(LowFireSettings.DEFAULT.verticalOffset())
+                .setMin(0.0)
+                .setMax(0.5)
+                .setTooltip(Component.translatable("option.ecclientsettings.low_fire.offset.tooltip"))
+                .setSaveConsumer(draft::setLowFireOffset)
                 .build());
     }
 }
