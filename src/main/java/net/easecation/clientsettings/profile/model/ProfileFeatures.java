@@ -35,4 +35,10 @@ public record ProfileFeatures(
                 new ForceSprintSettings(enabled), blockOutline, lowFire, fullbright, timeChanger, zoom, hitColor
         );
     }
+
+    public ProfileFeatures withFullbright(FullbrightSettings settings) {
+        return new ProfileFeatures(
+                forceSprint, blockOutline, lowFire, settings, timeChanger, zoom, hitColor
+        );
+    }
 }
