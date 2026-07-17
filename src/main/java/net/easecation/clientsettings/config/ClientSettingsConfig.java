@@ -1,10 +1,6 @@
 package net.easecation.clientsettings.config;
 
-import net.easecation.clientsettings.profile.runtime.ProfileServices;
 import net.neoforged.neoforge.common.ModConfigSpec;
-
-import java.io.IOException;
-import java.io.UncheckedIOException;
 
 public final class ClientSettingsConfig {
 
@@ -49,22 +45,6 @@ public final class ClientSettingsConfig {
     private ClientSettingsConfig() {
     }
 
-    public static boolean forceSprint() {
-        return ProfileServices.active()
-                .features()
-                .forceSprint()
-                .enabled();
-    }
-
-    public static void setForceSprint(boolean enabled) {
-        try {
-            ProfileServices.manager()
-                    .updateActiveFeatures(features -> features.withForceSprint(enabled));
-        } catch (IOException exception) {
-            throw new UncheckedIOException("Could not save force sprint to the active Profile", exception);
-        }
-    }
-
     public static boolean legacyForceSprint() {
         return FORCE_SPRINT.get();
     }
@@ -84,5 +64,11 @@ public final class ClientSettingsConfig {
 
     public static boolean allowServerWindowFrame() {
         return ALLOW_SERVER_WINDOW_FRAME.get();
+    }
+
+    public static void setServerWindowPermissions(boolean allowTitle, boolean allowFrame) {
+        ALLOW_SERVER_WINDOW_TITLE.set(allowTitle);
+        ALLOW_SERVER_WINDOW_FRAME.set(allowFrame);
+        SPEC.save();
     }
 }
