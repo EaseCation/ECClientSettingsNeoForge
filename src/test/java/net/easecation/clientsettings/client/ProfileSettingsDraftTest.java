@@ -82,6 +82,19 @@ class ProfileSettingsDraftTest {
         );
     }
 
+    @Test
+    void lowFireDraftSavesEnablementAndOffsetTogether() throws IOException {
+        ProfileManager profiles = manager();
+        ProfileSettingsDraft draft = ProfileSettingsDraft.active(profiles);
+        draft.setLowFireEnabled(true);
+        draft.setLowFireOffset(0.5);
+
+        draft.save(profiles);
+
+        assertTrue(profiles.activeSnapshot().features().lowFire().enabled());
+        assertEquals(0.5, profiles.activeSnapshot().features().lowFire().verticalOffset());
+    }
+
     private ProfileManager manager() throws IOException {
         return ProfileManager.load(new ProfileStore(temporaryDirectory), ProfileDefinition.defaults(true));
     }

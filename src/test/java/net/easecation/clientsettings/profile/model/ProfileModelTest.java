@@ -60,6 +60,7 @@ class ProfileModelTest {
         ));
 
         assertTrue(new LowFireSettings(true, 0.0).enabled());
+        assertEquals(0.5, new LowFireSettings(true, 0.5).verticalOffset());
         assertEquals(32.0, new ZoomSettings(
                 true, ZoomActivation.HOLD, 16.0, 32.0, 10.0, true, true, true
         ).maxDivisor());
