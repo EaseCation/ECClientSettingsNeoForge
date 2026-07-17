@@ -11,6 +11,8 @@ import net.easecation.clientsettings.profile.model.FullbrightMode;
 import net.easecation.clientsettings.profile.model.FullbrightSettings;
 import net.easecation.clientsettings.profile.model.TimeChangerMode;
 import net.easecation.clientsettings.profile.model.TimeChangerSettings;
+import net.easecation.clientsettings.profile.model.ZoomActivation;
+import net.easecation.clientsettings.profile.model.ZoomSettings;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 import net.easecation.clientsettings.profile.runtime.ProfileServices;
 import net.easecation.clientsettings.window.WindowAppearanceController;
@@ -240,6 +242,79 @@ public final class ClientSettingsScreen {
                 .setMax(23_999)
                 .setTooltip(Component.translatable("option.ecclientsettings.time_changer.custom_time.tooltip"))
                 .setSaveConsumer(draft::setTimeChangerCustomTime)
+                .build());
+        category.addEntry(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.zoom.enabled"),
+                        draft.zoomEnabled()
+                )
+                .setDefaultValue(ZoomSettings.DEFAULT.enabled())
+                .setTooltip(Component.translatable("option.ecclientsettings.zoom.enabled.tooltip"))
+                .setSaveConsumer(draft::setZoomEnabled)
+                .build());
+        category.addEntry(entries.startEnumSelector(
+                        Component.translatable("option.ecclientsettings.zoom.activation"),
+                        ZoomActivation.class,
+                        draft.zoomActivation()
+                )
+                .setDefaultValue(ZoomSettings.DEFAULT.activation())
+                .setEnumNameProvider(activation -> Component.translatable(
+                        "option.ecclientsettings.zoom.activation." + activation.name().toLowerCase(Locale.ROOT)
+                ))
+                .setSaveConsumer(draft::setZoomActivation)
+                .build());
+        category.addEntry(entries.startDoubleField(
+                        Component.translatable("option.ecclientsettings.zoom.divisor"),
+                        draft.zoomDivisor()
+                )
+                .setDefaultValue(ZoomSettings.DEFAULT.divisor())
+                .setMin(1.0)
+                .setMax(16.0)
+                .setTooltip(Component.translatable("option.ecclientsettings.zoom.divisor.tooltip"))
+                .setSaveConsumer(draft::setZoomDivisor)
+                .build());
+        category.addEntry(entries.startDoubleField(
+                        Component.translatable("option.ecclientsettings.zoom.max_divisor"),
+                        draft.zoomMaxDivisor()
+                )
+                .setDefaultValue(ZoomSettings.DEFAULT.maxDivisor())
+                .setMin(1.0)
+                .setMax(32.0)
+                .setTooltip(Component.translatable("option.ecclientsettings.zoom.max_divisor.tooltip"))
+                .setSaveConsumer(draft::setZoomMaxDivisor)
+                .build());
+        category.addEntry(entries.startDoubleField(
+                        Component.translatable("option.ecclientsettings.zoom.animation_speed"),
+                        draft.zoomAnimationSpeed()
+                )
+                .setDefaultValue(ZoomSettings.DEFAULT.animationSpeed())
+                .setMin(1.0)
+                .setMax(10.0)
+                .setTooltip(Component.translatable("option.ecclientsettings.zoom.animation_speed.tooltip"))
+                .setSaveConsumer(draft::setZoomAnimationSpeed)
+                .build());
+        category.addEntry(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.zoom.scroll_adjustment"),
+                        draft.zoomScrollAdjustment()
+                )
+                .setDefaultValue(ZoomSettings.DEFAULT.scrollAdjustment())
+                .setTooltip(Component.translatable("option.ecclientsettings.zoom.scroll_adjustment.tooltip"))
+                .setSaveConsumer(draft::setZoomScrollAdjustment)
+                .build());
+        category.addEntry(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.zoom.reduce_sensitivity"),
+                        draft.zoomReduceSensitivity()
+                )
+                .setDefaultValue(ZoomSettings.DEFAULT.reduceSensitivity())
+                .setTooltip(Component.translatable("option.ecclientsettings.zoom.reduce_sensitivity.tooltip"))
+                .setSaveConsumer(draft::setZoomReduceSensitivity)
+                .build());
+        category.addEntry(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.zoom.smooth_camera"),
+                        draft.zoomSmoothCamera()
+                )
+                .setDefaultValue(ZoomSettings.DEFAULT.smoothCamera())
+                .setTooltip(Component.translatable("option.ecclientsettings.zoom.smooth_camera.tooltip"))
+                .setSaveConsumer(draft::setZoomSmoothCamera)
                 .build());
     }
 }
