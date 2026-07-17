@@ -4,6 +4,8 @@ import net.easecation.clientsettings.profile.model.ProfileFeatures;
 import net.easecation.clientsettings.profile.model.ArgbColor;
 import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
 import net.easecation.clientsettings.profile.model.LowFireSettings;
+import net.easecation.clientsettings.profile.model.FullbrightMode;
+import net.easecation.clientsettings.profile.model.FullbrightSettings;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 
 import java.io.IOException;
@@ -61,6 +63,16 @@ public final class ProfileSettingsDraft {
     public void setLowFireOffset(double offset) {
         LowFireSettings current = pendingFeatures.lowFire();
         pendingFeatures = pendingFeatures.withLowFire(new LowFireSettings(current.enabled(), offset));
+    }
+
+    public void setFullbrightMode(FullbrightMode mode) {
+        FullbrightSettings current = pendingFeatures.fullbright();
+        pendingFeatures = pendingFeatures.withFullbright(new FullbrightSettings(mode, current.strength()));
+    }
+
+    public void setFullbrightStrength(double strength) {
+        FullbrightSettings current = pendingFeatures.fullbright();
+        pendingFeatures = pendingFeatures.withFullbright(new FullbrightSettings(current.mode(), strength));
     }
 
     public boolean edited() {
