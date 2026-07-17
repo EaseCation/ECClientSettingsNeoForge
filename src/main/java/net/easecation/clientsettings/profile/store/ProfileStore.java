@@ -62,6 +62,7 @@ public final class ProfileStore {
     }
 
     public ProfileLoadResult load(ProfileDefinition missingDefault) throws IOException {
+        boolean hadPersistedState = hasPersistedState();
         operations.createDirectories(profilesDirectory);
         List<String> warnings = new ArrayList<>();
         ProfileIndex storedIndex = readIndex(warnings);
@@ -72,7 +73,9 @@ public final class ProfileStore {
             defaultProfile = missingDefault;
             saveProfile(defaultProfile);
             discovered.put(defaultProfile.id(), defaultProfile);
-            warnings.add("Generated a safe Default Profile because it was missing or invalid");
+            if (hadPersistedState) {
+                warnings.add("Generated a safe Default Profile because it was missing or invalid");
+            }
         }
 
         List<String> order = recoveredOrder(storedIndex, discovered);
@@ -98,9 +101,24 @@ public final class ProfileStore {
         );
         if (!recoveredIndex.equals(storedIndex)) {
             saveIndex(recoveredIndex);
-            warnings.add("Rebuilt the Profile index from valid Profile files");
+            if (hadPersistedState) {
+                warnings.add("Rebuilt the Profile index from valid Profile files");
+            }
         }
         return new ProfileLoadResult(new ProfileCatalog(recoveredIndex, orderedProfiles), warnings);
+    }
+
+    private boolean hasPersistedState() throws IOException {
+        if (Files.isRegularFile(indexPath)) {
+            return true;
+        }
+        if (!Files.isDirectory(profilesDirectory)) {
+            return false;
+        }
+        try (var paths = Files.list(profilesDirectory)) {
+            return paths.anyMatch(path -> Files.isRegularFile(path)
+                    && path.getFileName().toString().endsWith(".json"));
+        }
     }
 
     public void saveProfile(ProfileDefinition profile) throws IOException {

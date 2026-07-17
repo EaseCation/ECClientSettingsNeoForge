@@ -84,9 +84,9 @@ public final class ProfileManagementScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
-        graphics.drawCenteredString(this.font, this.title, this.width / 2, 10, 0xFFFFFF);
+        graphics.drawCenteredString(this.font, this.title, this.width / 2, 10, 0xFFFFFFFF);
         if (error != null) {
-            graphics.drawCenteredString(this.font, error, this.width / 2, this.height - 78, 0xFF5555);
+            graphics.drawCenteredString(this.font, error, this.width / 2, this.height - 78, 0xFFFF5555);
         }
     }
 
@@ -275,7 +275,7 @@ public final class ProfileManagementScreen extends Screen {
                 name = name.copy().append(Component.translatable("format.ecclientsettings.profile.active")
                         .withStyle(ChatFormatting.GREEN));
             }
-            graphics.drawString(ProfileManagementScreen.this.font, name, left + 6, top + 7, 0xFFFFFF);
+            graphics.drawString(ProfileManagementScreen.this.font, name, left + 6, top + 7, 0xFFFFFFFF);
         }
 
         @Override

@@ -71,9 +71,9 @@ final class ProfileNameScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
-        graphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 52, 0xFFFFFF);
+        graphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 52, 0xFFFFFFFF);
         if (error != null) {
-            graphics.drawCenteredString(this.font, error, this.width / 2, this.height / 2 + 42, 0xFF5555);
+            graphics.drawCenteredString(this.font, error, this.width / 2, this.height / 2 + 42, 0xFFFF5555);
         }
     }
 

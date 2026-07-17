@@ -28,6 +28,15 @@ class ProfileStoreTest {
     Path temporaryDirectory;
 
     @Test
+    void freshInitializationDoesNotReportRecoveryWarnings() throws IOException {
+        ProfileLoadResult result = store().load(ProfileDefinition.defaults(true));
+
+        assertTrue(result.warnings().isEmpty());
+        assertTrue(Files.isRegularFile(temporaryDirectory.resolve("profiles.json")));
+        assertTrue(Files.isRegularFile(temporaryDirectory.resolve("profiles/default.json")));
+    }
+
+    @Test
     void createsDefaultAndRecoversOrphanInDeterministicOrder() throws IOException {
         ProfileStore store = store();
         ProfileDefinition orphan = new ProfileDefinition(
@@ -46,6 +55,7 @@ class ProfileStoreTest {
 
         assertEquals(List.of("default", orphan.id()), result.catalog().index().profileOrder());
         assertFalse(result.catalog().activeProfile().features().forceSprint().enabled());
+        assertEquals(2, result.warnings().size());
         assertTrue(Files.isRegularFile(temporaryDirectory.resolve("profiles.json")));
     }
 
