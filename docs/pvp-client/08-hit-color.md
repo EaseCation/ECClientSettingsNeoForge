@@ -10,17 +10,21 @@ Replace the color of Minecraft's existing server-synchronized hurt overlay while
 - No new texture asset or entity state.
 - No custom color for an empty swing or unconfirmed local attack.
 
+## Current Repository State
+
+The module has no overlay-texture accessor, GPU texture ownership, hit-color setting, or entity-render interception. No existing code changes vanilla hurt overlay pixels.
+
 ## AxolotlClient Reference Analysis
 
 Reference commit: `b1d066585626e4a7adf9f4ddbeb31cbf1ec3245f`
 
 Reference files:
 
-- `common/.../AxolotlClientConfigCommon.java`
-- `versions/1.21/.../mixin/OverlayTextureMixin.java`
-- `versions/1.21/.../mixin/OverlayTextureAccessor.java`
-- `versions/1.21/.../config/AxolotlClientConfig.java`
-- `versions/1.21/.../mixin/ArmorFeatureRendererMixin.java`
+- `common/src/main/java/io/github/axolotlclient/AxolotlClientConfigCommon.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/mixin/OverlayTextureMixin.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/mixin/OverlayTextureAccessor.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/config/AxolotlClientConfig.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/mixin/ArmorFeatureRendererMixin.java`
 
 Useful behavior:
 

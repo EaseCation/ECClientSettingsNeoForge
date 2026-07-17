@@ -10,14 +10,18 @@ Reduce first-person fire-overlay obstruction by moving the vanilla overlay downw
 - No third-person entity flame adjustment.
 - No cancellation that would remove fire entirely.
 
+## Current Repository State
+
+The module has no screen-effect rendering hook or fire-overlay setting. Existing Mixins affect keyboard input and window title only, so Low Fire introduces the first approved render Mixin in this repository.
+
 ## AxolotlClient Reference Analysis
 
 Reference commit: `b1d066585626e4a7adf9f4ddbeb31cbf1ec3245f`
 
 Reference files:
 
-- `common/.../AxolotlClientConfigCommon.java`
-- `versions/1.21/.../mixin/InGameOverlayRendererMixin.java`
+- `common/src/main/java/io/github/axolotlclient/AxolotlClientConfigCommon.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/mixin/InGameOverlayRendererMixin.java`
 
 Useful behavior:
 

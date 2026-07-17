@@ -23,10 +23,10 @@ Reference commit: `b1d066585626e4a7adf9f4ddbeb31cbf1ec3245f`
 
 Reference files:
 
-- `common/.../config/profiles/Profiles.java`
-- `common/.../config/profiles/ProfileAware.java`
-- `common/.../AxolotlClientCommon.java`
-- `versions/1.21/.../config/screen/ProfilesScreen.java`
+- `common/src/main/java/io/github/axolotlclient/config/profiles/Profiles.java`
+- `common/src/main/java/io/github/axolotlclient/config/profiles/ProfileAware.java`
+- `common/src/main/java/io/github/axolotlclient/AxolotlClientCommon.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/config/screen/ProfilesScreen.java`
 
 Useful behavior:
 

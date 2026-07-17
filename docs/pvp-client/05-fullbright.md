@@ -10,14 +10,18 @@ Provide local lightmap-only brightness modes without modifying the player's save
 - No real Night Vision effect, status icon, particles, or effect duration.
 - No persistent mutation of Minecraft `Options`.
 
+## Current Repository State
+
+The module does not currently intercept lightmap calculation, Gamma reads, Night Vision blending, or effect state. Existing global configuration contains no brightness setting.
+
 ## AxolotlClient Reference Analysis
 
 Reference commit: `b1d066585626e4a7adf9f4ddbeb31cbf1ec3245f`
 
 Reference files:
 
-- `common/.../AxolotlClientConfigCommon.java`
-- `versions/1.21/.../mixin/LightmapManagerMixin.java`
+- `common/src/main/java/io/github/axolotlclient/AxolotlClientConfigCommon.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/mixin/LightmapManagerMixin.java`
 
 Useful behavior:
 

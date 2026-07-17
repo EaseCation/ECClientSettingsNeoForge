@@ -10,14 +10,18 @@ Allow a Profile to select a fixed client-visible time while continuously preserv
 - No cross-server time carryover.
 - No animation or gradual time sweep in this phase.
 
+## Current Repository State
+
+The module has no time-packet interception, client-world time controller, or world-generation baseline state. Its current NeteaseBridge dependency is unrelated and is not used for Time Changer.
+
 ## AxolotlClient Reference Analysis
 
 Reference commit: `b1d066585626e4a7adf9f4ddbeb31cbf1ec3245f`
 
 Reference files:
 
-- `common/.../AxolotlClientConfigCommon.java`
-- `versions/1.21/.../mixin/ClientWorldMixin.java`
+- `common/src/main/java/io/github/axolotlclient/AxolotlClientConfigCommon.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/mixin/ClientWorldMixin.java`
 
 Useful behavior:
 

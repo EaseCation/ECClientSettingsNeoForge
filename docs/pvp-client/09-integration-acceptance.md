@@ -10,6 +10,16 @@ Prove that the approved Profile, settings/input, and six visual-feature branches
 - No claim that a build proves visual runtime behavior.
 - No opportunistic fixes in unrelated submodules.
 
+## Current Repository State
+
+`NeoForgeWorkspace` includes `ECClientSettingsNeoForge` as a composite build and packages its jar through the root modpack module registry. The original parent worktree already has unrelated user changes, so all integration work runs under `/home/ec/workspace/worktrees/ec-pvp-client/NeoForgeWorkspace` and never stages the original worktree.
+
+## AxolotlClient Reference Analysis
+
+Reference commit: `b1d066585626e4a7adf9f4ddbeb31cbf1ec3245f`.
+
+Repository-level references: `README.md` and `LICENSE`. Feature source references and understood behaviors are enumerated in documents 01 through 08. Integration adopts no upstream build, packaging, resource, or test structure. The relevant rejected behavior is bundling upstream implementation/assets; the acceptance scan treats any such reuse outside these documents as a failure.
+
 ## Dependency Order
 
 ```text

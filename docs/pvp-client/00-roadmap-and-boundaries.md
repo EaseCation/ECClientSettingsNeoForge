@@ -4,6 +4,13 @@
 
 Extend `ECClientSettingsNeoForge` with local, non-HUD PvP quality-of-life features for Minecraft 1.21.8 on NeoForge. The deliverable includes a versioned Profile system, global input/settings integration, and six independently configurable visual features.
 
+## Current Baseline
+
+- `ECClientSettingsNeoForge` base: `origin/master@93c2a7305c0ae614c35634034783ed54f1cd2c66`.
+- Parent `NeoForgeWorkspace` base: `origin/master@597dd04859637b755a80df70aef8d826b6386b74`.
+- Existing module target: Minecraft 1.21.8, NeoForge 21.8.52, Java 21, Cloth Config 19.0.147.
+- Existing behavior: Home opens EaseCation Settings, `I` toggles force sprint, and server-window title/frame permissions are global.
+
 ## Fixed Decisions
 
 - Target only Minecraft 1.21.8, NeoForge 21.8.x, and Java 21.
@@ -40,6 +47,8 @@ The following work remains deferred until the HUD owner is chosen. No API or dat
 ## AxolotlClient Reference Policy
 
 Behavior may be studied from AxolotlClient `dev@b1d066585626e4a7adf9f4ddbeb31cbf1ec3245f`. Implementation remains independent.
+
+Repository-level references are `README.md` and `LICENSE`; exact feature source paths are pinned in documents 01 through 08.
 
 The project must not copy AxolotlClient source, class structure, Mixin signatures, language text, textures, icons, videos, demonstrations, or other assets. Reference notes identify upstream files and observed behavior so reviewers can audit what was learned and what was deliberately rejected.
 
