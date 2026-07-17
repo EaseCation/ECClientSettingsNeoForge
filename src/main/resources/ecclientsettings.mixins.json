@@ -8,6 +8,7 @@
     "KeyboardInputMixin",
     "MinecraftTitleMixin",
     "render.LightTextureMixin",
+    "render.OverlayTextureAccessor",
     "render.ScreenEffectRendererMixin"
   ],
   "injectors": {

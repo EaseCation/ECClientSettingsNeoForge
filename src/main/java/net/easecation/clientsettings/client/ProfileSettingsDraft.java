@@ -6,6 +6,7 @@ import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
 import net.easecation.clientsettings.profile.model.LowFireSettings;
 import net.easecation.clientsettings.profile.model.FullbrightMode;
 import net.easecation.clientsettings.profile.model.FullbrightSettings;
+import net.easecation.clientsettings.profile.model.HitColorSettings;
 import net.easecation.clientsettings.profile.model.TimeChangerMode;
 import net.easecation.clientsettings.profile.model.TimeChangerSettings;
 import net.easecation.clientsettings.profile.model.ZoomActivation;
@@ -104,6 +105,19 @@ public final class ProfileSettingsDraft {
     public void setTimeChangerCustomTime(int customTime) {
         TimeChangerSettings current = pendingFeatures.timeChanger();
         pendingFeatures = pendingFeatures.withTimeChanger(new TimeChangerSettings(current.mode(), customTime));
+    }
+
+    public void setHitColorEnabled(boolean enabled) {
+        HitColorSettings current = pendingFeatures.hitColor();
+        pendingFeatures = pendingFeatures.withHitColor(new HitColorSettings(enabled, current.color()));
+    }
+
+    public void setHitColor(int color) {
+        HitColorSettings current = pendingFeatures.hitColor();
+        pendingFeatures = pendingFeatures.withHitColor(new HitColorSettings(
+                current.enabled(),
+                new ArgbColor(color)
+        ));
     }
 
     public boolean zoomEnabled() {

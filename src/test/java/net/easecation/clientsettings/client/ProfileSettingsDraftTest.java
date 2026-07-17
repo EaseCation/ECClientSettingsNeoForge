@@ -163,6 +163,19 @@ class ProfileSettingsDraftTest {
         assertEquals(ZoomSettings.DEFAULT, profiles.activeSnapshot().features().zoom());
     }
 
+    @Test
+    void hitColorDraftSavesEnablementAndPackedColorTogether() throws IOException {
+        ProfileManager profiles = manager();
+        ProfileSettingsDraft draft = ProfileSettingsDraft.active(profiles);
+        draft.setHitColorEnabled(true);
+        draft.setHitColor(0x60123456);
+
+        draft.save(profiles);
+
+        assertTrue(profiles.activeSnapshot().features().hitColor().enabled());
+        assertEquals(new ArgbColor(0x60123456), profiles.activeSnapshot().features().hitColor().color());
+    }
+
     private ProfileManager manager() throws IOException {
         return ProfileManager.load(new ProfileStore(temporaryDirectory), ProfileDefinition.defaults(true));
     }
