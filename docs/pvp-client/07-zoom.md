@@ -10,17 +10,21 @@ Provide smooth, configurable visual zoom using supported NeoForge camera/input e
 - No forced key unbinding.
 - No Mixin when NeoForge exposes the required event surfaces.
 
+## Current Repository State
+
+The module registers no Zoom key, FOV event, mouse-scroll handler, temporary turn scaling, or camera state machine. Existing input dispatch handles settings and force sprint only.
+
 ## AxolotlClient Reference Analysis
 
 Reference commit: `b1d066585626e4a7adf9f4ddbeb31cbf1ec3245f`
 
 Reference files:
 
-- `common/.../modules/zoom/Zoom.java`
-- `common/.../bridge/key/AxoKeybinding.java`
-- `versions/1.21/.../mixin/GameRendererMixin.java`
-- `versions/1.21/.../mixin/MouseMixin.java`
-- `versions/1.21/.../mixin/TitleScreenMixin.java`
+- `common/src/main/java/io/github/axolotlclient/modules/zoom/Zoom.java`
+- `common/src/main/java/io/github/axolotlclient/bridge/key/AxoKeybinding.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/mixin/GameRendererMixin.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/mixin/MouseMixin.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/mixin/TitleScreenMixin.java`
 
 Useful behavior:
 

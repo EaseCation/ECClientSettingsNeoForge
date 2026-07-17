@@ -23,11 +23,11 @@ Reference commit: `b1d066585626e4a7adf9f4ddbeb31cbf1ec3245f`
 
 Reference files:
 
-- `common/.../bridge/key/AxoKeybinding.java`
-- `common/.../AxolotlClientConfigCommon.java`
-- `common/.../modules/zoom/Zoom.java`
-- `versions/1.21/.../config/screen/ProfilesScreen.java`
-- `versions/1.21/.../mixin/TitleScreenMixin.java`
+- `common/src/main/java/io/github/axolotlclient/bridge/key/AxoKeybinding.java`
+- `common/src/main/java/io/github/axolotlclient/AxolotlClientConfigCommon.java`
+- `common/src/main/java/io/github/axolotlclient/modules/zoom/Zoom.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/config/screen/ProfilesScreen.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/mixin/TitleScreenMixin.java`
 
 Useful behavior:
 

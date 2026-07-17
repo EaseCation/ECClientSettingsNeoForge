@@ -10,15 +10,19 @@ Allow a Profile to replace the vanilla targeted-block outline color and opacity 
 - No Mixin when the supported NeoForge event can express the behavior.
 - No custom texture, shader, or copied rendering utility.
 
+## Current Repository State
+
+The module has no targeted-block rendering handler, outline setting, render-event bootstrap, or Block Outline Mixin. The active settings screen has no rendering category yet.
+
 ## AxolotlClient Reference Analysis
 
 Reference commit: `b1d066585626e4a7adf9f4ddbeb31cbf1ec3245f`
 
 Reference files:
 
-- `common/.../AxolotlClientConfigCommon.java`
-- `versions/1.21/.../mixin/WorldRendererMixin.java`
-- `versions/1.21/.../mixin/WorldRendererAccessor.java`
+- `common/src/main/java/io/github/axolotlclient/AxolotlClientConfigCommon.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/mixin/WorldRendererMixin.java`
+- `versions/1.21/src/main/java/io/github/axolotlclient/mixin/WorldRendererAccessor.java`
 
 Useful behavior:
 
