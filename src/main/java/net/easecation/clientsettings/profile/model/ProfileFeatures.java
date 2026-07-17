@@ -36,6 +36,12 @@ public record ProfileFeatures(
         );
     }
 
+    public ProfileFeatures withBlockOutline(BlockOutlineSettings settings) {
+        return new ProfileFeatures(
+                forceSprint, settings, lowFire, fullbright, timeChanger, zoom, hitColor
+        );
+    }
+
     public ProfileFeatures withFullbright(FullbrightSettings settings) {
         return new ProfileFeatures(
                 forceSprint, blockOutline, lowFire, settings, timeChanger, zoom, hitColor

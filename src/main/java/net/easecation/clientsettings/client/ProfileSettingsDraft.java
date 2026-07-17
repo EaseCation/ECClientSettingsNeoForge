@@ -1,6 +1,8 @@
 package net.easecation.clientsettings.client;
 
 import net.easecation.clientsettings.profile.model.ProfileFeatures;
+import net.easecation.clientsettings.profile.model.ArgbColor;
+import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 
 import java.io.IOException;
@@ -35,6 +37,19 @@ public final class ProfileSettingsDraft {
 
     public void setForceSprint(boolean enabled) {
         pendingFeatures = pendingFeatures.withForceSprint(enabled);
+    }
+
+    public void setBlockOutlineEnabled(boolean enabled) {
+        BlockOutlineSettings current = pendingFeatures.blockOutline();
+        pendingFeatures = pendingFeatures.withBlockOutline(new BlockOutlineSettings(enabled, current.color()));
+    }
+
+    public void setBlockOutlineColor(int color) {
+        BlockOutlineSettings current = pendingFeatures.blockOutline();
+        pendingFeatures = pendingFeatures.withBlockOutline(new BlockOutlineSettings(
+                current.enabled(),
+                new ArgbColor(color)
+        ));
     }
 
     public boolean edited() {
