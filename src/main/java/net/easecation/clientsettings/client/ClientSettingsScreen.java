@@ -7,6 +7,8 @@ import net.easecation.clientsettings.ECClientSettings;
 import net.easecation.clientsettings.config.ClientSettingsConfig;
 import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
 import net.easecation.clientsettings.profile.model.LowFireSettings;
+import net.easecation.clientsettings.profile.model.FullbrightMode;
+import net.easecation.clientsettings.profile.model.FullbrightSettings;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 import net.easecation.clientsettings.profile.runtime.ProfileServices;
 import net.easecation.clientsettings.window.WindowAppearanceController;
@@ -15,6 +17,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.io.IOException;
+import java.util.Locale;
 
 public final class ClientSettingsScreen {
 
@@ -191,6 +194,28 @@ public final class ClientSettingsScreen {
                 .setMax(0.5)
                 .setTooltip(Component.translatable("option.ecclientsettings.low_fire.offset.tooltip"))
                 .setSaveConsumer(draft::setLowFireOffset)
+                .build());
+        category.addEntry(entries.startEnumSelector(
+                        Component.translatable("option.ecclientsettings.fullbright.mode"),
+                        FullbrightMode.class,
+                        draft.features().fullbright().mode()
+                )
+                .setDefaultValue(FullbrightMode.OFF)
+                .setEnumNameProvider(mode -> Component.translatable(
+                        "option.ecclientsettings.fullbright.mode." + mode.name().toLowerCase(Locale.ROOT)
+                ))
+                .setTooltip(Component.translatable("option.ecclientsettings.fullbright.mode.tooltip"))
+                .setSaveConsumer(draft::setFullbrightMode)
+                .build());
+        category.addEntry(entries.startDoubleField(
+                        Component.translatable("option.ecclientsettings.fullbright.strength"),
+                        draft.features().fullbright().strength()
+                )
+                .setDefaultValue(FullbrightSettings.DEFAULT.strength())
+                .setMin(0.0)
+                .setMax(1.0)
+                .setTooltip(Component.translatable("option.ecclientsettings.fullbright.strength.tooltip"))
+                .setSaveConsumer(draft::setFullbrightStrength)
                 .build());
     }
 }

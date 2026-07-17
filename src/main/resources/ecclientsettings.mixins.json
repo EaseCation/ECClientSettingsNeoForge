@@ -6,6 +6,7 @@
   "client": [
     "KeyboardInputMixin",
     "MinecraftTitleMixin",
+    "render.LightTextureMixin",
     "render.ScreenEffectRendererMixin"
   ],
   "injectors": {

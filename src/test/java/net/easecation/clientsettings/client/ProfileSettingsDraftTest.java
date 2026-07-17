@@ -1,6 +1,7 @@
 package net.easecation.clientsettings.client;
 
 import net.easecation.clientsettings.profile.model.ArgbColor;
+import net.easecation.clientsettings.profile.model.FullbrightMode;
 import net.easecation.clientsettings.profile.model.ProfileDefinition;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 import net.easecation.clientsettings.profile.store.ProfileStore;
@@ -93,6 +94,19 @@ class ProfileSettingsDraftTest {
 
         assertTrue(profiles.activeSnapshot().features().lowFire().enabled());
         assertEquals(0.5, profiles.activeSnapshot().features().lowFire().verticalOffset());
+    }
+
+    @Test
+    void fullbrightDraftSavesModeAndStrengthTogether() throws IOException {
+        ProfileManager profiles = manager();
+        ProfileSettingsDraft draft = ProfileSettingsDraft.active(profiles);
+        draft.setFullbrightMode(FullbrightMode.NIGHT_VISION);
+        draft.setFullbrightStrength(0.75);
+
+        draft.save(profiles);
+
+        assertEquals(FullbrightMode.NIGHT_VISION, profiles.activeSnapshot().features().fullbright().mode());
+        assertEquals(0.75, profiles.activeSnapshot().features().fullbright().strength());
     }
 
     private ProfileManager manager() throws IOException {
