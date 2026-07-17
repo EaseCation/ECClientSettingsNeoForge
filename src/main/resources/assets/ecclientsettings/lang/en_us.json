@@ -7,6 +7,7 @@
   "key.ecclientsettings.toggle_force_sprint": "Toggle Force Sprint",
   "message.ecclientsettings.force_sprint.disabled": "Force sprint disabled",
   "message.ecclientsettings.force_sprint.enabled": "Force sprint enabled",
+  "message.ecclientsettings.force_sprint.save_failed": "Could not save force sprint; the previous setting is still active",
   "option.ecclientsettings.force_sprint": "Force Sprint",
   "option.ecclientsettings.force_sprint.tooltip": "Automatically attempts to sprint while moving forward and still follows vanilla sprint restrictions.",
   "option.ecclientsettings.server_window_frame": "Allow Server Title Bar Colors",

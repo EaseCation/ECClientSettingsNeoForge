@@ -31,7 +31,7 @@ public final class ClientSettingsScreen {
                 )
                 .setDefaultValue(ClientSettingsConfig.DEFAULT_FORCE_SPRINT)
                 .setTooltip(Component.translatable("option.ecclientsettings.force_sprint.tooltip"))
-                .setSaveConsumer(ClientSettingsConfig.FORCE_SPRINT::set)
+                .setSaveConsumer(ClientSettingsConfig::setForceSprint)
                 .build());
 
         windowCategory.addEntry(entries.startBooleanToggle(
@@ -58,4 +58,3 @@ public final class ClientSettingsScreen {
         return builder.build();
     }
 }
-

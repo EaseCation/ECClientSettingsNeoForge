@@ -1,7 +1,7 @@
 package net.easecation.clientsettings.mixin;
 
-import net.easecation.clientsettings.config.ClientSettingsConfig;
 import net.easecation.clientsettings.movement.SprintInputOverride;
+import net.easecation.clientsettings.profile.runtime.ProfileServices;
 import net.minecraft.client.player.KeyboardInput;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -14,7 +14,7 @@ abstract class KeyboardInputMixin {
     @Inject(method = "tick", at = @At("TAIL"))
     private void ecclientsettings$forceSprint(CallbackInfo callbackInfo) {
         KeyboardInput input = (KeyboardInput) (Object) this;
-        input.keyPresses = SprintInputOverride.apply(input.keyPresses, ClientSettingsConfig.forceSprint());
+        boolean forceSprint = ProfileServices.active().features().forceSprint().enabled();
+        input.keyPresses = SprintInputOverride.apply(input.keyPresses, forceSprint);
     }
 }
-

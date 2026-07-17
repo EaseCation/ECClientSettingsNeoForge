@@ -12,6 +12,8 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 
+import java.io.UncheckedIOException;
+
 public final class ClientSettingsEvents {
 
     private static final Component MODS_BUTTON = Component.translatable("fml.menu.mods");
@@ -37,11 +39,21 @@ public final class ClientSettingsEvents {
             return;
         }
 
-        boolean enabled = ForceSprintToggle.toggle(
-                ClientSettingsConfig.forceSprint(),
-                ClientSettingsConfig::setForceSprint,
-                () -> player.setSprinting(false)
-        );
+        boolean enabled;
+        try {
+            enabled = ForceSprintToggle.toggle(
+                    ClientSettingsConfig.forceSprint(),
+                    ClientSettingsConfig::setForceSprint,
+                    () -> player.setSprinting(false)
+            );
+        } catch (UncheckedIOException exception) {
+            ECClientSettings.LOGGER.error("Could not toggle force sprint", exception.getCause());
+            player.displayClientMessage(
+                    Component.translatable("message.ecclientsettings.force_sprint.save_failed"),
+                    false
+            );
+            return;
+        }
         String messageKey = enabled
                 ? "message.ecclientsettings.force_sprint.enabled"
                 : "message.ecclientsettings.force_sprint.disabled";
