@@ -6,6 +6,8 @@ import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
 import net.easecation.clientsettings.profile.model.LowFireSettings;
 import net.easecation.clientsettings.profile.model.FullbrightMode;
 import net.easecation.clientsettings.profile.model.FullbrightSettings;
+import net.easecation.clientsettings.profile.model.TimeChangerMode;
+import net.easecation.clientsettings.profile.model.TimeChangerSettings;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 
 import java.io.IOException;
@@ -73,6 +75,16 @@ public final class ProfileSettingsDraft {
     public void setFullbrightStrength(double strength) {
         FullbrightSettings current = pendingFeatures.fullbright();
         pendingFeatures = pendingFeatures.withFullbright(new FullbrightSettings(current.mode(), strength));
+    }
+
+    public void setTimeChangerMode(TimeChangerMode mode) {
+        TimeChangerSettings current = pendingFeatures.timeChanger();
+        pendingFeatures = pendingFeatures.withTimeChanger(new TimeChangerSettings(mode, current.customTime()));
+    }
+
+    public void setTimeChangerCustomTime(int customTime) {
+        TimeChangerSettings current = pendingFeatures.timeChanger();
+        pendingFeatures = pendingFeatures.withTimeChanger(new TimeChangerSettings(current.mode(), customTime));
     }
 
     public boolean edited() {

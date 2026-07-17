@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [
+    "client.ClientPacketListenerMixin",
     "KeyboardInputMixin",
     "MinecraftTitleMixin",
     "render.LightTextureMixin",

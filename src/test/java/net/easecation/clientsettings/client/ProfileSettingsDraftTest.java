@@ -2,6 +2,7 @@ package net.easecation.clientsettings.client;
 
 import net.easecation.clientsettings.profile.model.ArgbColor;
 import net.easecation.clientsettings.profile.model.FullbrightMode;
+import net.easecation.clientsettings.profile.model.TimeChangerMode;
 import net.easecation.clientsettings.profile.model.ProfileDefinition;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 import net.easecation.clientsettings.profile.store.ProfileStore;
@@ -107,6 +108,19 @@ class ProfileSettingsDraftTest {
 
         assertEquals(FullbrightMode.NIGHT_VISION, profiles.activeSnapshot().features().fullbright().mode());
         assertEquals(0.75, profiles.activeSnapshot().features().fullbright().strength());
+    }
+
+    @Test
+    void timeChangerDraftSavesModeAndValidatedCustomTimeTogether() throws IOException {
+        ProfileManager profiles = manager();
+        ProfileSettingsDraft draft = ProfileSettingsDraft.active(profiles);
+        draft.setTimeChangerMode(TimeChangerMode.CUSTOM);
+        draft.setTimeChangerCustomTime(23_999);
+
+        draft.save(profiles);
+
+        assertEquals(TimeChangerMode.CUSTOM, profiles.activeSnapshot().features().timeChanger().mode());
+        assertEquals(23_999, profiles.activeSnapshot().features().timeChanger().customTime());
     }
 
     private ProfileManager manager() throws IOException {
