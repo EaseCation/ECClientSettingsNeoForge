@@ -8,6 +8,8 @@ import net.easecation.clientsettings.profile.model.FullbrightMode;
 import net.easecation.clientsettings.profile.model.FullbrightSettings;
 import net.easecation.clientsettings.profile.model.TimeChangerMode;
 import net.easecation.clientsettings.profile.model.TimeChangerSettings;
+import net.easecation.clientsettings.profile.model.ZoomActivation;
+import net.easecation.clientsettings.profile.model.ZoomSettings;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 
 import java.io.IOException;
@@ -18,11 +20,28 @@ public final class ProfileSettingsDraft {
     private final String profileId;
     private final ProfileFeatures initialFeatures;
     private ProfileFeatures pendingFeatures;
+    private boolean zoomEnabled;
+    private ZoomActivation zoomActivation;
+    private double zoomDivisor;
+    private double zoomMaxDivisor;
+    private double zoomAnimationSpeed;
+    private boolean zoomScrollAdjustment;
+    private boolean zoomReduceSensitivity;
+    private boolean zoomSmoothCamera;
 
     public ProfileSettingsDraft(String profileId, ProfileFeatures features) {
         this.profileId = profileId;
         this.initialFeatures = Objects.requireNonNull(features, "features");
         this.pendingFeatures = features;
+        ZoomSettings zoom = features.zoom();
+        this.zoomEnabled = zoom.enabled();
+        this.zoomActivation = zoom.activation();
+        this.zoomDivisor = zoom.divisor();
+        this.zoomMaxDivisor = zoom.maxDivisor();
+        this.zoomAnimationSpeed = zoom.animationSpeed();
+        this.zoomScrollAdjustment = zoom.scrollAdjustment();
+        this.zoomReduceSensitivity = zoom.reduceSensitivity();
+        this.zoomSmoothCamera = zoom.smoothCamera();
     }
 
     public static ProfileSettingsDraft active(ProfileManager profiles) {
@@ -87,16 +106,94 @@ public final class ProfileSettingsDraft {
         pendingFeatures = pendingFeatures.withTimeChanger(new TimeChangerSettings(current.mode(), customTime));
     }
 
+    public boolean zoomEnabled() {
+        return zoomEnabled;
+    }
+
+    public ZoomActivation zoomActivation() {
+        return zoomActivation;
+    }
+
+    public double zoomDivisor() {
+        return zoomDivisor;
+    }
+
+    public double zoomMaxDivisor() {
+        return zoomMaxDivisor;
+    }
+
+    public double zoomAnimationSpeed() {
+        return zoomAnimationSpeed;
+    }
+
+    public boolean zoomScrollAdjustment() {
+        return zoomScrollAdjustment;
+    }
+
+    public boolean zoomReduceSensitivity() {
+        return zoomReduceSensitivity;
+    }
+
+    public boolean zoomSmoothCamera() {
+        return zoomSmoothCamera;
+    }
+
+    public void setZoomEnabled(boolean value) {
+        zoomEnabled = value;
+    }
+
+    public void setZoomActivation(ZoomActivation value) {
+        zoomActivation = Objects.requireNonNull(value, "zoom activation");
+    }
+
+    public void setZoomDivisor(double value) {
+        zoomDivisor = value;
+    }
+
+    public void setZoomMaxDivisor(double value) {
+        zoomMaxDivisor = value;
+    }
+
+    public void setZoomAnimationSpeed(double value) {
+        zoomAnimationSpeed = value;
+    }
+
+    public void setZoomScrollAdjustment(boolean value) {
+        zoomScrollAdjustment = value;
+    }
+
+    public void setZoomReduceSensitivity(boolean value) {
+        zoomReduceSensitivity = value;
+    }
+
+    public void setZoomSmoothCamera(boolean value) {
+        zoomSmoothCamera = value;
+    }
+
     public boolean edited() {
-        return !pendingFeatures.equals(initialFeatures);
+        return !materializedFeatures().equals(initialFeatures);
     }
 
     public void save(ProfileManager profiles) throws IOException {
         if (!profiles.activeSnapshot().id().equals(profileId)) {
             throw new IOException("Active Profile changed while its settings screen was open");
         }
-        if (edited()) {
-            profiles.updateActiveFeatures(ignored -> pendingFeatures);
+        ProfileFeatures materialized = materializedFeatures();
+        if (!materialized.equals(initialFeatures)) {
+            profiles.updateActiveFeatures(ignored -> materialized);
         }
+    }
+
+    private ProfileFeatures materializedFeatures() {
+        return pendingFeatures.withZoom(new ZoomSettings(
+                zoomEnabled,
+                zoomActivation,
+                zoomDivisor,
+                zoomMaxDivisor,
+                zoomAnimationSpeed,
+                zoomScrollAdjustment,
+                zoomReduceSensitivity,
+                zoomSmoothCamera
+        ));
     }
 }

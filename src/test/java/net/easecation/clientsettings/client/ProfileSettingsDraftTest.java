@@ -3,6 +3,8 @@ package net.easecation.clientsettings.client;
 import net.easecation.clientsettings.profile.model.ArgbColor;
 import net.easecation.clientsettings.profile.model.FullbrightMode;
 import net.easecation.clientsettings.profile.model.TimeChangerMode;
+import net.easecation.clientsettings.profile.model.ZoomActivation;
+import net.easecation.clientsettings.profile.model.ZoomSettings;
 import net.easecation.clientsettings.profile.model.ProfileDefinition;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 import net.easecation.clientsettings.profile.store.ProfileStore;
@@ -121,6 +123,44 @@ class ProfileSettingsDraftTest {
 
         assertEquals(TimeChangerMode.CUSTOM, profiles.activeSnapshot().features().timeChanger().mode());
         assertEquals(23_999, profiles.activeSnapshot().features().timeChanger().customTime());
+    }
+
+    @Test
+    void zoomDraftValidatesAllFieldsTogetherAtSaveTime() throws IOException {
+        ProfileManager profiles = manager();
+        ProfileSettingsDraft draft = ProfileSettingsDraft.active(profiles);
+        draft.setZoomEnabled(true);
+        draft.setZoomActivation(ZoomActivation.TOGGLE);
+        draft.setZoomDivisor(12.0);
+        draft.setZoomMaxDivisor(24.0);
+        draft.setZoomAnimationSpeed(5.0);
+        draft.setZoomScrollAdjustment(true);
+        draft.setZoomReduceSensitivity(false);
+        draft.setZoomSmoothCamera(true);
+
+        draft.save(profiles);
+
+        assertEquals(ZoomActivation.TOGGLE, profiles.activeSnapshot().features().zoom().activation());
+        assertEquals(12.0, profiles.activeSnapshot().features().zoom().divisor());
+        assertEquals(24.0, profiles.activeSnapshot().features().zoom().maxDivisor());
+        assertEquals(5.0, profiles.activeSnapshot().features().zoom().animationSpeed());
+        assertTrue(profiles.activeSnapshot().features().zoom().scrollAdjustment());
+        assertFalse(profiles.activeSnapshot().features().zoom().reduceSensitivity());
+        assertTrue(profiles.activeSnapshot().features().zoom().smoothCamera());
+    }
+
+    @Test
+    void invalidZoomPairDoesNotPartiallySaveOtherDraftFields() throws IOException {
+        ProfileManager profiles = manager();
+        ProfileSettingsDraft draft = ProfileSettingsDraft.active(profiles);
+        draft.setForceSprint(false);
+        draft.setZoomDivisor(16.0);
+        draft.setZoomMaxDivisor(8.0);
+
+        assertThrows(IllegalArgumentException.class, () -> draft.save(profiles));
+
+        assertTrue(profiles.activeSnapshot().features().forceSprint().enabled());
+        assertEquals(ZoomSettings.DEFAULT, profiles.activeSnapshot().features().zoom());
     }
 
     private ProfileManager manager() throws IOException {
