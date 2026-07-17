@@ -48,6 +48,12 @@ public record ProfileFeatures(
         );
     }
 
+    public ProfileFeatures withTimeChanger(TimeChangerSettings settings) {
+        return new ProfileFeatures(
+                forceSprint, blockOutline, lowFire, fullbright, settings, zoom, hitColor
+        );
+    }
+
     public ProfileFeatures withFullbright(FullbrightSettings settings) {
         return new ProfileFeatures(
                 forceSprint, blockOutline, lowFire, settings, timeChanger, zoom, hitColor

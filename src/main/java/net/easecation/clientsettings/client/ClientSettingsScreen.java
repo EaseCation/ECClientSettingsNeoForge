@@ -9,6 +9,8 @@ import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
 import net.easecation.clientsettings.profile.model.LowFireSettings;
 import net.easecation.clientsettings.profile.model.FullbrightMode;
 import net.easecation.clientsettings.profile.model.FullbrightSettings;
+import net.easecation.clientsettings.profile.model.TimeChangerMode;
+import net.easecation.clientsettings.profile.model.TimeChangerSettings;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 import net.easecation.clientsettings.profile.runtime.ProfileServices;
 import net.easecation.clientsettings.window.WindowAppearanceController;
@@ -216,6 +218,28 @@ public final class ClientSettingsScreen {
                 .setMax(1.0)
                 .setTooltip(Component.translatable("option.ecclientsettings.fullbright.strength.tooltip"))
                 .setSaveConsumer(draft::setFullbrightStrength)
+                .build());
+        category.addEntry(entries.startEnumSelector(
+                        Component.translatable("option.ecclientsettings.time_changer.mode"),
+                        TimeChangerMode.class,
+                        draft.features().timeChanger().mode()
+                )
+                .setDefaultValue(TimeChangerMode.FOLLOW_SERVER)
+                .setEnumNameProvider(mode -> Component.translatable(
+                        "option.ecclientsettings.time_changer.mode." + mode.name().toLowerCase(Locale.ROOT)
+                ))
+                .setTooltip(Component.translatable("option.ecclientsettings.time_changer.mode.tooltip"))
+                .setSaveConsumer(draft::setTimeChangerMode)
+                .build());
+        category.addEntry(entries.startIntField(
+                        Component.translatable("option.ecclientsettings.time_changer.custom_time"),
+                        draft.features().timeChanger().customTime()
+                )
+                .setDefaultValue(TimeChangerSettings.DEFAULT.customTime())
+                .setMin(0)
+                .setMax(23_999)
+                .setTooltip(Component.translatable("option.ecclientsettings.time_changer.custom_time.tooltip"))
+                .setSaveConsumer(draft::setTimeChangerCustomTime)
                 .build());
     }
 }
