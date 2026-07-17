@@ -5,6 +5,7 @@ import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.easecation.clientsettings.ECClientSettings;
 import net.easecation.clientsettings.config.ClientSettingsConfig;
+import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 import net.easecation.clientsettings.profile.runtime.ProfileServices;
 import net.easecation.clientsettings.window.WindowAppearanceController;
@@ -47,6 +48,7 @@ public final class ClientSettingsScreen {
 
         addProfileCategory(builder, entries, parent, profiles, draft, saveError);
         addMovementCategory(builder, entries, draft);
+        addRenderingCategory(builder, entries, draft);
         addServerPermissionsCategory(builder, entries, allowTitle, allowFrame);
 
         builder.setSavingRunnable(() -> {
@@ -144,6 +146,32 @@ public final class ClientSettingsScreen {
                 .setDefaultValue(ClientSettingsConfig.DEFAULT_ALLOW_SERVER_WINDOW_FRAME)
                 .setTooltip(Component.translatable("option.ecclientsettings.server_window_frame.tooltip"))
                 .setSaveConsumer(value -> allowFrame[0] = value)
+                .build());
+    }
+
+    private static void addRenderingCategory(
+            ConfigBuilder builder,
+            ConfigEntryBuilder entries,
+            ProfileSettingsDraft draft
+    ) {
+        ConfigCategory category = builder.getOrCreateCategory(
+                Component.translatable("category.ecclientsettings.rendering")
+        );
+        category.addEntry(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.block_outline.enabled"),
+                        draft.features().blockOutline().enabled()
+                )
+                .setDefaultValue(false)
+                .setTooltip(Component.translatable("option.ecclientsettings.block_outline.enabled.tooltip"))
+                .setSaveConsumer(draft::setBlockOutlineEnabled)
+                .build());
+        category.addEntry(entries.startAlphaColorField(
+                        Component.translatable("option.ecclientsettings.block_outline.color"),
+                        draft.features().blockOutline().color().value()
+                )
+                .setDefaultValue(BlockOutlineSettings.DEFAULT.color().value())
+                .setTooltip(Component.translatable("option.ecclientsettings.block_outline.color.tooltip"))
+                .setSaveConsumer(draft::setBlockOutlineColor)
                 .build());
     }
 }

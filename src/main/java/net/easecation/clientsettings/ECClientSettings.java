@@ -4,6 +4,7 @@ import net.easecation.clientsettings.client.ClientSettingsEvents;
 import net.easecation.clientsettings.client.ClientSettingsKeyMappings;
 import net.easecation.clientsettings.client.input.ClientInputDispatcher;
 import net.easecation.clientsettings.config.ClientSettingsConfig;
+import net.easecation.clientsettings.feature.blockoutline.BlockOutlineRenderer;
 import net.easecation.clientsettings.window.WindowAppearanceEvents;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -25,6 +26,7 @@ public final class ECClientSettings {
         modEventBus.addListener(ClientSettingsKeyMappings::register);
 
         NeoForge.EVENT_BUS.addListener(ClientInputDispatcher::onClientTick);
+        NeoForge.EVENT_BUS.addListener(BlockOutlineRenderer::onRenderHighlight);
         NeoForge.EVENT_BUS.addListener(ClientSettingsEvents::onScreenKeyPressed);
         NeoForge.EVENT_BUS.addListener(ClientSettingsEvents::onScreenInit);
         NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onModEvent);

@@ -1,5 +1,6 @@
 package net.easecation.clientsettings.client;
 
+import net.easecation.clientsettings.profile.model.ArgbColor;
 import net.easecation.clientsettings.profile.model.ProfileDefinition;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 import net.easecation.clientsettings.profile.store.ProfileStore;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -62,6 +64,22 @@ class ProfileSettingsDraftTest {
         assertThrows(IOException.class, () -> draft.save(unavailable));
         assertTrue(draft.edited());
         assertTrue(available.activeSnapshot().features().forceSprint().enabled());
+    }
+
+    @Test
+    void blockOutlineDraftSavesEnablementAndPackedColorTogether() throws IOException {
+        ProfileManager profiles = manager();
+        ProfileSettingsDraft draft = ProfileSettingsDraft.active(profiles);
+        draft.setBlockOutlineEnabled(true);
+        draft.setBlockOutlineColor(0x40123456);
+
+        draft.save(profiles);
+
+        assertTrue(profiles.activeSnapshot().features().blockOutline().enabled());
+        assertEquals(
+                new ArgbColor(0x40123456),
+                profiles.activeSnapshot().features().blockOutline().color()
+        );
     }
 
     private ProfileManager manager() throws IOException {
