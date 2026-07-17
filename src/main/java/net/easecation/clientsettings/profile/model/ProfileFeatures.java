@@ -65,4 +65,10 @@ public record ProfileFeatures(
                 forceSprint, blockOutline, lowFire, settings, timeChanger, zoom, hitColor
         );
     }
+
+    public ProfileFeatures withHitColor(HitColorSettings settings) {
+        return new ProfileFeatures(
+                forceSprint, blockOutline, lowFire, fullbright, timeChanger, zoom, settings
+        );
+    }
 }

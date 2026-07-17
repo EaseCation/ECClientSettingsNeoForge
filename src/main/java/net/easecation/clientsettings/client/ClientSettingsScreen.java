@@ -9,6 +9,7 @@ import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
 import net.easecation.clientsettings.profile.model.LowFireSettings;
 import net.easecation.clientsettings.profile.model.FullbrightMode;
 import net.easecation.clientsettings.profile.model.FullbrightSettings;
+import net.easecation.clientsettings.profile.model.HitColorSettings;
 import net.easecation.clientsettings.profile.model.TimeChangerMode;
 import net.easecation.clientsettings.profile.model.TimeChangerSettings;
 import net.easecation.clientsettings.profile.model.ZoomActivation;
@@ -315,6 +316,22 @@ public final class ClientSettingsScreen {
                 .setDefaultValue(ZoomSettings.DEFAULT.smoothCamera())
                 .setTooltip(Component.translatable("option.ecclientsettings.zoom.smooth_camera.tooltip"))
                 .setSaveConsumer(draft::setZoomSmoothCamera)
+                .build());
+        category.addEntry(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.hit_color.enabled"),
+                        draft.features().hitColor().enabled()
+                )
+                .setDefaultValue(HitColorSettings.DEFAULT.enabled())
+                .setTooltip(Component.translatable("option.ecclientsettings.hit_color.enabled.tooltip"))
+                .setSaveConsumer(draft::setHitColorEnabled)
+                .build());
+        category.addEntry(entries.startAlphaColorField(
+                        Component.translatable("option.ecclientsettings.hit_color.color"),
+                        draft.features().hitColor().color().value()
+                )
+                .setDefaultValue(HitColorSettings.DEFAULT.color().value())
+                .setTooltip(Component.translatable("option.ecclientsettings.hit_color.color.tooltip"))
+                .setSaveConsumer(draft::setHitColor)
                 .build());
     }
 }

@@ -5,6 +5,7 @@ import net.easecation.clientsettings.client.ClientSettingsKeyMappings;
 import net.easecation.clientsettings.client.input.ClientInputDispatcher;
 import net.easecation.clientsettings.config.ClientSettingsConfig;
 import net.easecation.clientsettings.feature.blockoutline.BlockOutlineRenderer;
+import net.easecation.clientsettings.feature.hitcolor.HitColorRuntime;
 import net.easecation.clientsettings.feature.timechanger.TimeChangerRuntime;
 import net.easecation.clientsettings.feature.zoom.ZoomEvents;
 import net.easecation.clientsettings.window.WindowAppearanceEvents;
@@ -37,6 +38,8 @@ public final class ECClientSettings {
         NeoForge.EVENT_BUS.addListener(ZoomEvents::onLoggingOut);
         NeoForge.EVENT_BUS.addListener(ZoomEvents::onClone);
         NeoForge.EVENT_BUS.addListener(BlockOutlineRenderer::onRenderHighlight);
+        NeoForge.EVENT_BUS.addListener(HitColorRuntime::onClientTick);
+        NeoForge.EVENT_BUS.addListener(HitColorRuntime::onClientStopping);
         NeoForge.EVENT_BUS.addListener(ClientSettingsEvents::onScreenKeyPressed);
         NeoForge.EVENT_BUS.addListener(ClientSettingsEvents::onScreenInit);
         NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onModEvent);
