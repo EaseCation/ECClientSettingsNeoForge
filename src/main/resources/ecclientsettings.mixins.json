@@ -4,8 +4,8 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [
-    "DataComponentHolderMixin",
     "client.ClientPacketListenerMixin",
+    "ItemMixin",
     "KeyboardInputMixin",
     "MinecraftTitleMixin",
     "MultiPlayerGameModeMixin",
