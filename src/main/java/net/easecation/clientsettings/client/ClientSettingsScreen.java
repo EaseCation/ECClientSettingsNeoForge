@@ -20,6 +20,9 @@ public final class ClientSettingsScreen {
         ConfigCategory category = builder.getOrCreateCategory(
                 Component.translatable("category.ecclientsettings.default")
         );
+        ConfigCategory combatCategory = builder.getOrCreateCategory(
+                Component.translatable("category.ecclientsettings.combat")
+        );
         ConfigCategory windowCategory = builder.getOrCreateCategory(
                 Component.translatable("category.ecclientsettings.server_window")
         );
@@ -32,6 +35,15 @@ public final class ClientSettingsScreen {
                 .setDefaultValue(ClientSettingsConfig.DEFAULT_FORCE_SPRINT)
                 .setTooltip(Component.translatable("option.ecclientsettings.force_sprint.tooltip"))
                 .setSaveConsumer(ClientSettingsConfig.FORCE_SPRINT::set)
+                .build());
+
+        combatCategory.addEntry(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.sword_blocking_animation"),
+                        ClientSettingsConfig.swordBlockingAnimation()
+                )
+                .setDefaultValue(ClientSettingsConfig.DEFAULT_SWORD_BLOCKING_ANIMATION)
+                .setTooltip(Component.translatable("option.ecclientsettings.sword_blocking_animation.tooltip"))
+                .setSaveConsumer(ClientSettingsConfig.SWORD_BLOCKING_ANIMATION::set)
                 .build());
 
         windowCategory.addEntry(entries.startBooleanToggle(
@@ -58,4 +70,3 @@ public final class ClientSettingsScreen {
         return builder.build();
     }
 }
-

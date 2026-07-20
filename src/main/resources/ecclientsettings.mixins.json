@@ -4,11 +4,12 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [
+    "DataComponentHolderMixin",
     "KeyboardInputMixin",
-    "MinecraftTitleMixin"
+    "MinecraftTitleMixin",
+    "MultiPlayerGameModeMixin"
   ],
   "injectors": {
     "defaultRequire": 1
   }
 }
-

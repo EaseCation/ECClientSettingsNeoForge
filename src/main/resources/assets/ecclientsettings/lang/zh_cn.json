@@ -1,6 +1,7 @@
 {
   "button.ecclientsettings.open": "客户端设置",
   "category.ecclientsettings.default": "默认设置",
+  "category.ecclientsettings.combat": "战斗设置",
   "category.ecclientsettings.server_window": "服务器窗口外观",
   "key.categories.ecclientsettings": "EaseCation 客户端设置",
   "key.ecclientsettings.open_settings": "打开客户端设置",
@@ -9,6 +10,8 @@
   "message.ecclientsettings.force_sprint.enabled": "强制疾跑已开启",
   "option.ecclientsettings.force_sprint": "强制疾跑",
   "option.ecclientsettings.force_sprint.tooltip": "持续向前移动时自动尝试疾跑，仍遵守原版疾跑限制。",
+  "option.ecclientsettings.sword_blocking_animation": "防砍动画",
+  "option.ecclientsettings.sword_blocking_animation.tooltip": "手持剑右键时播放旧版格挡动画。默认关闭，开启后副手方块仍可正常放置。",
   "option.ecclientsettings.server_window_frame": "允许服务器修改标题栏颜色",
   "option.ecclientsettings.server_window_frame.tooltip": "允许当前服务器设置系统窗口标题栏的深色模式或颜色。不支持的平台会安全忽略。",
   "option.ecclientsettings.server_window_title": "允许服务器修改窗口标题",

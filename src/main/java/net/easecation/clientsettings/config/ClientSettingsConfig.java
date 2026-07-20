@@ -5,10 +5,12 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 public final class ClientSettingsConfig {
 
     public static final boolean DEFAULT_FORCE_SPRINT = true;
+    public static final boolean DEFAULT_SWORD_BLOCKING_ANIMATION = false;
     public static final boolean DEFAULT_ALLOW_SERVER_WINDOW_TITLE = true;
     public static final boolean DEFAULT_ALLOW_SERVER_WINDOW_FRAME = true;
     public static final ModConfigSpec SPEC;
     public static final ModConfigSpec.BooleanValue FORCE_SPRINT;
+    public static final ModConfigSpec.BooleanValue SWORD_BLOCKING_ANIMATION;
     public static final ModConfigSpec.BooleanValue ALLOW_SERVER_WINDOW_TITLE;
     public static final ModConfigSpec.BooleanValue ALLOW_SERVER_WINDOW_FRAME;
 
@@ -19,6 +21,13 @@ public final class ClientSettingsConfig {
                 .comment("Automatically hold the vanilla sprint input while moving forward.")
                 .translation("option.ecclientsettings.force_sprint")
                 .define("forceSprint", DEFAULT_FORCE_SPRINT);
+        builder.pop();
+
+        builder.push("combat");
+        SWORD_BLOCKING_ANIMATION = builder
+                .comment("Play the legacy blocking animation when holding a sword and using it.")
+                .translation("option.ecclientsettings.sword_blocking_animation")
+                .define("swordBlockingAnimation", DEFAULT_SWORD_BLOCKING_ANIMATION);
         builder.pop();
 
         builder.push("serverWindowAppearance");
@@ -44,6 +53,10 @@ public final class ClientSettingsConfig {
     public static void setForceSprint(boolean enabled) {
         FORCE_SPRINT.set(enabled);
         SPEC.save();
+    }
+
+    public static boolean swordBlockingAnimation() {
+        return SWORD_BLOCKING_ANIMATION.get();
     }
 
     public static boolean allowServerWindowTitle() {
