@@ -5,12 +5,14 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 public final class ClientSettingsConfig {
 
     public static final boolean DEFAULT_FORCE_SPRINT = true;
+    public static final boolean DEFAULT_SWORD_BLOCKING_ANIMATION = false;
     public static final boolean DEFAULT_ALLOW_SERVER_WINDOW_TITLE = true;
     public static final boolean DEFAULT_ALLOW_SERVER_WINDOW_FRAME = true;
     public static final int PROFILE_MIGRATION_VERSION = 1;
     public static final ModConfigSpec SPEC;
     public static final ModConfigSpec.BooleanValue FORCE_SPRINT;
     public static final ModConfigSpec.IntValue PROFILE_MIGRATION;
+    public static final ModConfigSpec.BooleanValue SWORD_BLOCKING_ANIMATION;
     public static final ModConfigSpec.BooleanValue ALLOW_SERVER_WINDOW_TITLE;
     public static final ModConfigSpec.BooleanValue ALLOW_SERVER_WINDOW_FRAME;
 
@@ -27,6 +29,13 @@ public final class ClientSettingsConfig {
         PROFILE_MIGRATION = builder
                 .comment("Internal migration marker for versioned Profile storage.")
                 .defineInRange("profileVersion", 0, 0, PROFILE_MIGRATION_VERSION);
+        builder.pop();
+
+        builder.push("combat");
+        SWORD_BLOCKING_ANIMATION = builder
+                .comment("Play the legacy blocking animation when holding a sword and using it.")
+                .translation("option.ecclientsettings.sword_blocking_animation")
+                .define("swordBlockingAnimation", DEFAULT_SWORD_BLOCKING_ANIMATION);
         builder.pop();
 
         builder.push("serverWindowAppearance");
@@ -56,6 +65,10 @@ public final class ClientSettingsConfig {
     public static void setProfileMigrationVersion(int version) {
         PROFILE_MIGRATION.set(version);
         SPEC.save();
+    }
+
+    public static boolean swordBlockingAnimation() {
+        return SWORD_BLOCKING_ANIMATION.get();
     }
 
     public static boolean allowServerWindowTitle() {

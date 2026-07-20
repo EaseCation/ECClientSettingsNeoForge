@@ -57,6 +57,7 @@ public final class ClientSettingsScreen {
 
         addProfileCategory(builder, entries, parent, profiles, draft, saveError);
         addMovementCategory(builder, entries, draft);
+        addCombatCategory(builder, entries);
         addRenderingCategory(builder, entries, draft);
         addServerPermissionsCategory(builder, entries, allowTitle, allowFrame);
 
@@ -128,6 +129,20 @@ public final class ClientSettingsScreen {
                 .setDefaultValue(ClientSettingsConfig.DEFAULT_FORCE_SPRINT)
                 .setTooltip(Component.translatable("option.ecclientsettings.force_sprint.tooltip"))
                 .setSaveConsumer(draft::setForceSprint)
+                .build());
+    }
+
+    private static void addCombatCategory(ConfigBuilder builder, ConfigEntryBuilder entries) {
+        ConfigCategory category = builder.getOrCreateCategory(
+                Component.translatable("category.ecclientsettings.combat")
+        );
+        category.addEntry(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.sword_blocking_animation"),
+                        ClientSettingsConfig.swordBlockingAnimation()
+                )
+                .setDefaultValue(ClientSettingsConfig.DEFAULT_SWORD_BLOCKING_ANIMATION)
+                .setTooltip(Component.translatable("option.ecclientsettings.sword_blocking_animation.tooltip"))
+                .setSaveConsumer(ClientSettingsConfig.SWORD_BLOCKING_ANIMATION::set)
                 .build());
     }
 
