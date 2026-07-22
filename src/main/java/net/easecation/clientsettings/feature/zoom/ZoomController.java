@@ -5,15 +5,16 @@ import net.easecation.clientsettings.profile.model.ZoomSettings;
 
 public final class ZoomController {
 
+    private static final double TICKS_PER_SECOND = 20.0;
+    private static final double SETTLE_EPSILON = 1.0E-4;
+    private static final double SCROLL_STEP_EPSILON = 1.0E-9;
+
     private ZoomState state = ZoomState.INACTIVE;
     private boolean desiredActive;
     private double activeDivisor = ZoomSettings.DEFAULT.divisor();
-    private double previousMultiplier = 1.0;
     private double currentMultiplier = 1.0;
-    private double transitionStart = 1.0;
-    private double transitionTarget = 1.0;
-    private int transitionTick;
-    private int transitionDuration = 1;
+    private double targetMultiplier = 1.0;
+    private double scrollAccumulator;
 
     public void updateInput(ZoomSettings settings, boolean keyDown, boolean clicked, boolean validContext) {
         if (!validContext || !settings.enabled()) {
@@ -28,50 +29,60 @@ public final class ZoomController {
         setDesiredActive(requested, settings);
     }
 
-    public void tick() {
-        previousMultiplier = currentMultiplier;
+    public void advance(double deltaSeconds, ZoomSettings settings) {
         if (state != ZoomState.ENTERING && state != ZoomState.EXITING) {
             return;
         }
-        transitionTick++;
-        double progress = Math.min(1.0, (double) transitionTick / transitionDuration);
-        double eased = smoothstep(progress);
-        currentMultiplier = lerp(transitionStart, transitionTarget, eased);
-        if (progress >= 1.0) {
-            currentMultiplier = transitionTarget;
-            previousMultiplier = currentMultiplier;
+        currentMultiplier = advanceMultiplier(
+                currentMultiplier,
+                targetMultiplier,
+                settings.animationSpeed(),
+                deltaSeconds
+        );
+        if (Math.abs(currentMultiplier - targetMultiplier) <= SETTLE_EPSILON) {
+            currentMultiplier = targetMultiplier;
             state = desiredActive ? ZoomState.ACTIVE : ZoomState.INACTIVE;
         }
     }
 
-    public boolean handleScroll(ZoomSettings settings, double deltaY, boolean validContext) {
+    public ScrollResult handleScroll(ZoomSettings settings, double deltaY, boolean validContext) {
         if (!validContext
                 || !settings.enabled()
                 || !settings.scrollAdjustment()
                 || !desiredActive
                 || deltaY == 0.0
                 || !Double.isFinite(deltaY)) {
-            return false;
+            return ScrollResult.PASS;
         }
-        double adjusted = clamp(activeDivisor + Math.signum(deltaY), 1.0, settings.maxDivisor());
+
+        if (scrollAccumulator != 0.0 && Math.signum(scrollAccumulator) != Math.signum(deltaY)) {
+            scrollAccumulator = 0.0;
+        }
+        scrollAccumulator += deltaY;
+        int steps = wholeScrollSteps(scrollAccumulator);
+        if (steps == 0) {
+            return ScrollResult.CONSUMED_UNCHANGED;
+        }
+        scrollAccumulator -= steps;
+
+        double adjusted = clamp(activeDivisor + steps, 1.0, settings.maxDivisor());
         if (adjusted == activeDivisor) {
-            return false;
+            return ScrollResult.CONSUMED_UNCHANGED;
         }
         activeDivisor = adjusted;
-        beginTransition(1.0 / activeDivisor, ZoomState.ENTERING, settings.animationSpeed());
-        return true;
+        beginTransition(1.0 / activeDivisor, ZoomState.ENTERING);
+        return ScrollResult.CONSUMED_CHANGED;
     }
 
-    public double interpolatedMultiplier(double partialTick) {
-        double clampedPartialTick = clamp(partialTick, 0.0, 1.0);
-        return lerp(previousMultiplier, currentMultiplier, clampedPartialTick);
+    public double currentMultiplier() {
+        return currentMultiplier;
     }
 
     public double effectiveSensitivity(double vanilla, ZoomSettings settings) {
         if (!shouldAffectView() || !settings.reduceSensitivity()) {
             return vanilla;
         }
-        return vanilla / (activeDivisor * activeDivisor);
+        return vanilla * currentMultiplier * currentMultiplier;
     }
 
     public boolean effectiveCinematicCamera(boolean vanilla, ZoomSettings settings) {
@@ -82,12 +93,9 @@ public final class ZoomController {
         state = ZoomState.INACTIVE;
         desiredActive = false;
         activeDivisor = settings.divisor();
-        previousMultiplier = 1.0;
         currentMultiplier = 1.0;
-        transitionStart = 1.0;
-        transitionTarget = 1.0;
-        transitionTick = 0;
-        transitionDuration = 1;
+        targetMultiplier = 1.0;
+        scrollAccumulator = 0.0;
     }
 
     public boolean shouldAffectView() {
@@ -106,13 +114,19 @@ public final class ZoomController {
         return activeDivisor;
     }
 
-    public static int transitionDuration(double animationSpeed) {
-        return Math.max(1, (int) Math.ceil(11.0 - animationSpeed));
-    }
-
-    public static double smoothstep(double value) {
-        double clamped = clamp(value, 0.0, 1.0);
-        return clamped * clamped * (3.0 - 2.0 * clamped);
+    public static double advanceMultiplier(double current, double target, double animationSpeed, double deltaSeconds) {
+        if (!Double.isFinite(deltaSeconds) || deltaSeconds < 0.0 || current == target) {
+            return current;
+        }
+        if (animationSpeed >= 10.0) {
+            return target;
+        }
+        if (deltaSeconds == 0.0) {
+            return current;
+        }
+        double retentionPerTick = 1.0 - animationSpeed / 10.0;
+        double retention = Math.pow(retentionPerTick, deltaSeconds * TICKS_PER_SECOND);
+        return target + (current - target) * retention;
     }
 
     private void setDesiredActive(boolean requested, ZoomSettings settings) {
@@ -120,13 +134,14 @@ public final class ZoomController {
             return;
         }
         desiredActive = requested;
+        scrollAccumulator = 0.0;
         if (requested) {
             if (state == ZoomState.INACTIVE) {
                 activeDivisor = settings.divisor();
             }
-            beginTransition(1.0 / activeDivisor, ZoomState.ENTERING, settings.animationSpeed());
+            beginTransition(1.0 / activeDivisor, ZoomState.ENTERING);
         } else {
-            beginTransition(1.0, ZoomState.EXITING, settings.animationSpeed());
+            beginTransition(1.0, ZoomState.EXITING);
         }
     }
 
@@ -138,24 +153,53 @@ public final class ZoomController {
         double adjusted = clamp(activeDivisor, 1.0, settings.maxDivisor());
         if (adjusted != activeDivisor) {
             activeDivisor = adjusted;
-            beginTransition(1.0 / activeDivisor, ZoomState.ENTERING, settings.animationSpeed());
+            beginTransition(1.0 / activeDivisor, ZoomState.ENTERING);
         }
     }
 
-    private void beginTransition(double target, ZoomState transitionState, double animationSpeed) {
-        transitionStart = currentMultiplier;
-        transitionTarget = target;
-        transitionTick = 0;
-        transitionDuration = transitionDuration(animationSpeed);
-        previousMultiplier = currentMultiplier;
+    private void beginTransition(double target, ZoomState transitionState) {
+        targetMultiplier = target;
+        if (Math.abs(currentMultiplier - targetMultiplier) <= SETTLE_EPSILON) {
+            currentMultiplier = targetMultiplier;
+            state = desiredActive ? ZoomState.ACTIVE : ZoomState.INACTIVE;
+            return;
+        }
         state = transitionState;
     }
 
-    private static double lerp(double start, double end, double progress) {
-        return start + (end - start) * progress;
+    private static int wholeScrollSteps(double accumulated) {
+        if (accumulated >= 1.0 - SCROLL_STEP_EPSILON) {
+            return (int) Math.floor(accumulated + SCROLL_STEP_EPSILON);
+        }
+        if (accumulated <= -1.0 + SCROLL_STEP_EPSILON) {
+            return (int) Math.ceil(accumulated - SCROLL_STEP_EPSILON);
+        }
+        return 0;
     }
 
     private static double clamp(double value, double minimum, double maximum) {
         return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    public enum ScrollResult {
+        PASS(false, false),
+        CONSUMED_UNCHANGED(true, false),
+        CONSUMED_CHANGED(true, true);
+
+        private final boolean consumed;
+        private final boolean changed;
+
+        ScrollResult(boolean consumed, boolean changed) {
+            this.consumed = consumed;
+            this.changed = changed;
+        }
+
+        public boolean consumed() {
+            return consumed;
+        }
+
+        public boolean changed() {
+            return changed;
+        }
     }
 }

@@ -12,7 +12,7 @@ Provide smooth, configurable visual zoom using supported NeoForge camera/input e
 
 ## Current Repository State
 
-The module registers no Zoom key, FOV event, mouse-scroll handler, temporary turn scaling, or camera state machine. Existing input dispatch handles settings and force sprint only.
+The module registers a conventional `C` Zoom key and implements FOV, mouse-scroll, and temporary turn scaling through NeoForge events. `ZoomController` owns all transient animation and input state; no saved Minecraft camera option is mutated.
 
 ## AxolotlClient Reference Analysis
 
@@ -80,18 +80,20 @@ Validation:
 INACTIVE -> ENTERING -> ACTIVE -> EXITING -> INACTIVE
 ```
 
-It also tracks previous/current/target FOV multipliers, the active divisor, transition progress, and toggle latch.
+It also tracks current/target FOV multipliers, the active divisor, a high-resolution scroll accumulator, and the toggle latch.
 
 - Target multiplier is `1 / activeDivisor` while zoomed and `1` while exiting.
-- Animation speed maps deterministically to a transition duration from ten ticks at speed 1 to one tick at speed 10.
-- Tick updates use smoothstep interpolation; `ComputeFov` interpolates previous/current tick values with event partial tick.
+- Animation follows AxolotlClient's exponential approach but advances from elapsed render time, making the curve independent of frame rate: `retention = (1 - speed / 10) ^ (deltaSeconds * 20)`.
+- Speed 10 snaps directly to the target. Other speeds settle to the exact target within a small epsilon.
+- Input is synchronized before FOV and turn calculation, with the client tick retained as a lifecycle fallback.
 - A divisor change while active starts a new transition from the current multiplier without jumping.
 
 ## Input Behavior
 
 - `HOLD`: desired active state follows `KeyMapping.isDown()`.
 - `TOGGLE`: each consumed click flips desired active state once.
-- Scroll changes active divisor by the sign of vertical delta, clamps it to `1..maxDivisor`, and cancels vanilla scrolling only when Zoom actually consumed the event.
+- Scroll accumulates high-resolution vertical deltas, changes the active divisor by whole steps, and clamps it to `1..maxDivisor`.
+- Every valid vertical scroll is consumed while scroll adjustment is active, including at divisor boundaries, so Zoom never changes the hotbar accidentally.
 - With a screen open, Zoom exits and scroll is never consumed.
 
 ## FOV And Turn Scaling
@@ -100,7 +102,7 @@ On `ViewportEvent.ComputeFov`, multiply the event's vanilla FOV by the interpola
 
 On `CalculatePlayerTurnEvent`:
 
-- If sensitivity reduction is enabled, supply `vanillaSensitivity / (activeDivisor * activeDivisor)`.
+- If sensitivity reduction is enabled, supply `vanillaSensitivity * currentMultiplier * currentMultiplier`. At the final target this is equivalent to `vanillaSensitivity / (activeDivisor * activeDivisor)`, while transitions remain visually synchronized.
 - If smooth camera is enabled, set only the event's temporary cinematic-camera value.
 
 The controller never reads an option for later restoration and never calls an option setter.
@@ -133,9 +135,9 @@ No Mixin or asset is added.
 
 - All valid state transitions and repeated input idempotence.
 - HOLD and TOGGLE semantics.
-- Speed-to-duration mapping and smoothstep endpoint/monotonic behavior.
-- Divisor and scroll clamping, including large and horizontal-only deltas.
-- Scroll cancellation only after consumption.
+- AxolotlClient curve parity at 20 updates per second and frame-rate independence at 20, 60, and 144 FPS.
+- Divisor and scroll clamping, including high-resolution accumulation, direction reversal, boundaries, and invalid deltas.
+- Scroll cancellation throughout active scroll adjustment, including when the divisor cannot change further.
 - Sensitivity scaling and cinematic-camera event values without option mutation.
 - Every mandatory reset condition.
 - Profile switch while entering, active, and exiting.
