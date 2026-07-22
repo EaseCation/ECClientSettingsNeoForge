@@ -4,10 +4,14 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [
+    "client.ClientPacketListenerMixin",
     "ItemMixin",
     "KeyboardInputMixin",
     "MinecraftTitleMixin",
-    "MultiPlayerGameModeMixin"
+    "MultiPlayerGameModeMixin",
+    "render.LightTextureMixin",
+    "render.OverlayTextureAccessor",
+    "render.ScreenEffectRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

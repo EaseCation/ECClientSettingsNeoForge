@@ -8,8 +8,10 @@ public final class ClientSettingsConfig {
     public static final boolean DEFAULT_SWORD_BLOCKING_ANIMATION = false;
     public static final boolean DEFAULT_ALLOW_SERVER_WINDOW_TITLE = true;
     public static final boolean DEFAULT_ALLOW_SERVER_WINDOW_FRAME = true;
+    public static final int PROFILE_MIGRATION_VERSION = 1;
     public static final ModConfigSpec SPEC;
     public static final ModConfigSpec.BooleanValue FORCE_SPRINT;
+    public static final ModConfigSpec.IntValue PROFILE_MIGRATION;
     public static final ModConfigSpec.BooleanValue SWORD_BLOCKING_ANIMATION;
     public static final ModConfigSpec.BooleanValue ALLOW_SERVER_WINDOW_TITLE;
     public static final ModConfigSpec.BooleanValue ALLOW_SERVER_WINDOW_FRAME;
@@ -18,9 +20,15 @@ public final class ClientSettingsConfig {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         builder.push("movement");
         FORCE_SPRINT = builder
-                .comment("Automatically hold the vanilla sprint input while moving forward.")
+                .comment("Deprecated migration source. Runtime force sprint is stored in the active Profile.")
                 .translation("option.ecclientsettings.force_sprint")
                 .define("forceSprint", DEFAULT_FORCE_SPRINT);
+        builder.pop();
+
+        builder.push("migration");
+        PROFILE_MIGRATION = builder
+                .comment("Internal migration marker for versioned Profile storage.")
+                .defineInRange("profileVersion", 0, 0, PROFILE_MIGRATION_VERSION);
         builder.pop();
 
         builder.push("combat");
@@ -46,12 +54,16 @@ public final class ClientSettingsConfig {
     private ClientSettingsConfig() {
     }
 
-    public static boolean forceSprint() {
+    public static boolean legacyForceSprint() {
         return FORCE_SPRINT.get();
     }
 
-    public static void setForceSprint(boolean enabled) {
-        FORCE_SPRINT.set(enabled);
+    public static int profileMigrationVersion() {
+        return PROFILE_MIGRATION.get();
+    }
+
+    public static void setProfileMigrationVersion(int version) {
+        PROFILE_MIGRATION.set(version);
         SPEC.save();
     }
 
@@ -65,5 +77,11 @@ public final class ClientSettingsConfig {
 
     public static boolean allowServerWindowFrame() {
         return ALLOW_SERVER_WINDOW_FRAME.get();
+    }
+
+    public static void setServerWindowPermissions(boolean allowTitle, boolean allowFrame) {
+        ALLOW_SERVER_WINDOW_TITLE.set(allowTitle);
+        ALLOW_SERVER_WINDOW_FRAME.set(allowFrame);
+        SPEC.save();
     }
 }
