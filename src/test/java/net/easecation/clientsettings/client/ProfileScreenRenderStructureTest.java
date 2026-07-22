@@ -24,7 +24,8 @@ class ProfileScreenRenderStructureTest {
     void customProfileScreensDoNotRenderTheirBackgroundTwice() throws IOException {
         for (String resource : List.of(
                 "net/easecation/clientsettings/client/ProfileManagementScreen.class",
-                "net/easecation/clientsettings/client/ProfileNameScreen.class"
+                "net/easecation/clientsettings/client/ProfileNameScreen.class",
+                "net/easecation/clientsettings/client/HudEditorScreen.class"
         )) {
             ClassNode screen = readClass(resource);
             boolean callsRenderBackground = screen.methods.stream()
@@ -49,7 +50,8 @@ class ProfileScreenRenderStructureTest {
         for (String resource : List.of(
                 "net/easecation/clientsettings/client/ProfileManagementScreen.class",
                 "net/easecation/clientsettings/client/ProfileManagementScreen$ProfileEntry.class",
-                "net/easecation/clientsettings/client/ProfileNameScreen.class"
+                "net/easecation/clientsettings/client/ProfileNameScreen.class",
+                "net/easecation/clientsettings/client/HudEditorScreen.class"
         )) {
             ClassNode screen = readClass(resource);
             List<MethodInsnNode> textCalls = screen.methods.stream()

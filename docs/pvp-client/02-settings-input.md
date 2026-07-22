@@ -48,13 +48,13 @@ Register actions through NeoForge's key-mapping event:
 
 | Action | Default | Scope |
 |---|---:|---|
-| Open EaseCation Settings | Home | Global setting |
+| Open EaseCation Settings | Right Shift | Global setting |
 | Toggle Force Sprint | I | Writes active Profile |
 | Zoom | C | Global binding, Profile behavior |
 | Cycle To Next Profile | Unbound | Global binding |
 | Toggle Fullbright | Unbound | Global binding, Profile mode |
 
-Right Shift is intentionally unused while HUD ownership is unresolved. Every default can be changed in Minecraft Controls and is stored in `options.txt`.
+Right Shift opens the complete EaseCation client settings screen. The HUD editor remains an explicit entry inside the HUD category rather than replacing this global navigation shortcut. Every default can be changed in Minecraft Controls and is stored in `options.txt`.
 
 The mod does not inspect other bindings to choose a different key at runtime. Minecraft's standard conflict display is the authoritative warning surface. A conflict does not delete, rewrite, or disable either mapping.
 

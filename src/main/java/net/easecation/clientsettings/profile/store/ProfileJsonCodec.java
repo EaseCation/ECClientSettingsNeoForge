@@ -12,6 +12,12 @@ import net.easecation.clientsettings.profile.model.ForceSprintSettings;
 import net.easecation.clientsettings.profile.model.FullbrightMode;
 import net.easecation.clientsettings.profile.model.FullbrightSettings;
 import net.easecation.clientsettings.profile.model.HitColorSettings;
+import net.easecation.clientsettings.profile.model.HudSettings;
+import net.easecation.clientsettings.profile.model.HudTextColorMode;
+import net.easecation.clientsettings.profile.model.HudWidgetId;
+import net.easecation.clientsettings.profile.model.HudWidgetSettings;
+import net.easecation.clientsettings.profile.model.HudWidgetStyle;
+import net.easecation.clientsettings.profile.model.KeystrokesSettings;
 import net.easecation.clientsettings.profile.model.LowFireSettings;
 import net.easecation.clientsettings.profile.model.ProfileDefinition;
 import net.easecation.clientsettings.profile.model.ProfileFeatures;
@@ -25,7 +31,9 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public final class ProfileJsonCodec {
@@ -59,7 +67,7 @@ public final class ProfileJsonCodec {
         }
         try {
             return new ProfileIndex(
-                    requireInt(root, "schemaVersion"),
+                    ProfileDefinition.CURRENT_SCHEMA_VERSION,
                     requireString(root, "activeProfileId"),
                     profileOrder
             );
@@ -83,7 +91,7 @@ public final class ProfileJsonCodec {
         requireOnly(root, "Profile", Set.of("schemaVersion", "id", "name", "features"));
         try {
             return new ProfileDefinition(
-                    requireInt(root, "schemaVersion"),
+                    ProfileDefinition.CURRENT_SCHEMA_VERSION,
                     requireString(root, "id"),
                     requireString(root, "name"),
                     decodeFeatures(requireObject(root, "features"))
@@ -129,12 +137,13 @@ public final class ProfileJsonCodec {
         JsonObject hitColor = object("enabled", features.hitColor().enabled());
         hitColor.addProperty("color", features.hitColor().color().serialized());
         root.add("hitColor", hitColor);
+        root.add("hud", encodeHud(features.hud()));
         return root;
     }
 
     private ProfileFeatures decodeFeatures(JsonObject root) throws IOException {
         requireOnly(root, "features", Set.of(
-                "forceSprint", "blockOutline", "lowFire", "fullbright", "timeChanger", "zoom", "hitColor"
+                "forceSprint", "blockOutline", "lowFire", "fullbright", "timeChanger", "zoom", "hitColor", "hud"
         ));
 
         JsonObject forceSprint = requireObject(root, "forceSprint");
@@ -192,7 +201,133 @@ public final class ProfileJsonCodec {
                 new HitColorSettings(
                         requireBoolean(hitColor, "enabled"),
                         ArgbColor.parse(requireString(hitColor, "color"))
-                )
+                ),
+                decodeHud(requireObject(root, "hud"))
+        );
+    }
+
+    private JsonObject encodeHud(HudSettings hud) {
+        JsonObject root = new JsonObject();
+        for (HudWidgetId id : HudWidgetId.values()) {
+            HudWidgetSettings settings = hud.widget(id);
+            JsonObject widget = object("enabled", settings.enabled());
+            widget.addProperty("normalizedX", settings.normalizedX());
+            widget.addProperty("normalizedY", settings.normalizedY());
+            widget.addProperty("scale", settings.scale());
+            widget.add("style", encodeHudStyle(settings.style()));
+            if (id == HudWidgetId.KEYSTROKES) {
+                widget.add("content", encodeKeystrokes(hud.keystrokes()));
+            }
+            root.add(id.serializedName(), widget);
+        }
+        return root;
+    }
+
+    private JsonObject encodeKeystrokes(KeystrokesSettings settings) {
+        JsonObject root = new JsonObject();
+        root.addProperty("showMovement", settings.showMovement());
+        root.addProperty("showJump", settings.showJump());
+        root.addProperty("showMouseButtons", settings.showMouseButtons());
+        root.addProperty("showCps", settings.showCps());
+        root.addProperty("keySize", settings.keySize());
+        root.addProperty("gap", settings.gap());
+        root.addProperty("cornerRadius", settings.cornerRadius());
+        root.addProperty("keyBorderWidth", settings.keyBorderWidth());
+        root.addProperty("idleBackgroundColor", settings.idleBackgroundColor().serialized());
+        root.addProperty("pressedBackgroundColor", settings.pressedBackgroundColor().serialized());
+        root.addProperty("idleBorderColor", settings.idleBorderColor().serialized());
+        root.addProperty("pressedBorderColor", settings.pressedBorderColor().serialized());
+        root.addProperty("pressedTextColor", settings.pressedTextColor().serialized());
+        root.addProperty("pressAnimationMillis", settings.pressAnimationMillis());
+        return root;
+    }
+
+    private JsonObject encodeHudStyle(HudWidgetStyle style) {
+        JsonObject root = new JsonObject();
+        root.addProperty("backgroundEnabled", style.backgroundEnabled());
+        root.addProperty("backgroundColor", style.backgroundColor().serialized());
+        root.addProperty("borderEnabled", style.borderEnabled());
+        root.addProperty("borderColor", style.borderColor().serialized());
+        root.addProperty("borderWidth", style.borderWidth());
+        root.addProperty("padding", style.padding());
+        root.addProperty("textShadow", style.textShadow());
+        root.addProperty("textColorMode", style.textColorMode().name());
+        root.addProperty("textColor", style.textColor().serialized());
+        root.addProperty("animationSpeed", style.animationSpeed());
+        root.addProperty("rainbowSpread", style.rainbowSpread());
+        return root;
+    }
+
+    private HudSettings decodeHud(JsonObject root) throws IOException {
+        requireOnly(root, "hud", Set.of("armor", "potions", "ping", "fps", "keystrokes"));
+        Map<HudWidgetId, HudWidgetSettings> widgets = new EnumMap<>(HudWidgetId.class);
+        KeystrokesSettings keystrokes = null;
+        for (HudWidgetId id : HudWidgetId.values()) {
+            String field = id.serializedName();
+            JsonObject widget = requireObject(root, field);
+            Set<String> fields = id == HudWidgetId.KEYSTROKES
+                    ? Set.of("enabled", "normalizedX", "normalizedY", "scale", "style", "content")
+                    : Set.of("enabled", "normalizedX", "normalizedY", "scale", "style");
+            requireOnly(widget, "hud." + field, fields);
+            boolean enabled = requireBoolean(widget, "enabled");
+            double normalizedX = requireDouble(widget, "normalizedX");
+            double normalizedY = requireDouble(widget, "normalizedY");
+            double scale = requireDouble(widget, "scale");
+            widgets.put(id, new HudWidgetSettings(
+                    enabled, normalizedX, normalizedY, scale,
+                    decodeHudStyle(requireObject(widget, "style"))
+            ));
+            if (id == HudWidgetId.KEYSTROKES) {
+                keystrokes = decodeKeystrokes(requireObject(widget, "content"));
+            }
+        }
+        return new HudSettings(widgets, keystrokes);
+    }
+
+    private KeystrokesSettings decodeKeystrokes(JsonObject root) throws IOException {
+        requireOnly(root, "hud.keystrokes.content", Set.of(
+                "showMovement", "showJump", "showMouseButtons", "showCps",
+                "keySize", "gap", "cornerRadius", "keyBorderWidth",
+                "idleBackgroundColor", "pressedBackgroundColor",
+                "idleBorderColor", "pressedBorderColor", "pressedTextColor",
+                "pressAnimationMillis"
+        ));
+        return new KeystrokesSettings(
+                requireBoolean(root, "showMovement"),
+                requireBoolean(root, "showJump"),
+                requireBoolean(root, "showMouseButtons"),
+                requireBoolean(root, "showCps"),
+                requireInt(root, "keySize"),
+                requireInt(root, "gap"),
+                requireInt(root, "cornerRadius"),
+                requireInt(root, "keyBorderWidth"),
+                ArgbColor.parse(requireString(root, "idleBackgroundColor")),
+                ArgbColor.parse(requireString(root, "pressedBackgroundColor")),
+                ArgbColor.parse(requireString(root, "idleBorderColor")),
+                ArgbColor.parse(requireString(root, "pressedBorderColor")),
+                ArgbColor.parse(requireString(root, "pressedTextColor")),
+                requireInt(root, "pressAnimationMillis")
+        );
+    }
+
+    private HudWidgetStyle decodeHudStyle(JsonObject root) throws IOException {
+        requireOnly(root, "hud.style", Set.of(
+                "backgroundEnabled", "backgroundColor", "borderEnabled", "borderColor",
+                "borderWidth", "padding", "textShadow", "textColorMode", "textColor",
+                "animationSpeed", "rainbowSpread"
+        ));
+        return new HudWidgetStyle(
+                requireBoolean(root, "backgroundEnabled"),
+                ArgbColor.parse(requireString(root, "backgroundColor")),
+                requireBoolean(root, "borderEnabled"),
+                ArgbColor.parse(requireString(root, "borderColor")),
+                requireInt(root, "borderWidth"),
+                requireInt(root, "padding"),
+                requireBoolean(root, "textShadow"),
+                requireEnum(root, "textColorMode", HudTextColorMode.class),
+                ArgbColor.parse(requireString(root, "textColor")),
+                requireDouble(root, "animationSpeed"),
+                requireDouble(root, "rainbowSpread")
         );
     }
 
@@ -201,8 +336,8 @@ public final class ProfileJsonCodec {
         if (schemaVersion > ProfileDefinition.CURRENT_SCHEMA_VERSION) {
             throw new UnsupportedProfileSchemaException(schemaVersion);
         }
-        if (schemaVersion < ProfileDefinition.CURRENT_SCHEMA_VERSION) {
-            throw invalid("Unsupported older Profile schema version: " + schemaVersion);
+        if (schemaVersion != ProfileDefinition.CURRENT_SCHEMA_VERSION) {
+            throw invalid("Unsupported Profile schema version: " + schemaVersion);
         }
     }
 

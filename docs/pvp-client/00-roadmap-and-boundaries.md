@@ -33,16 +33,19 @@ Extend `ECClientSettingsNeoForge` with local, non-HUD PvP quality-of-life featur
 8. Hit Color driven by vanilla server-synchronized hurt state.
 9. Cross-feature integration, build verification, and a manual acceptance matrix.
 
-## Explicitly Deferred TODO List
+## Original Phase Deferrals
 
-The following work remains deferred until the HUD owner is chosen. No API or data model for it is added in this project phase.
+The original non-HUD phase deliberately added no HUD API or data model. The follow-up phase in
+`10-hud-foundation-and-priority.md` now owns local Profile-backed HUD rendering, layout editing,
+FPS, Ping, Armor, Potion, and Keystrokes with optional embedded CPS.
 
-- Armor, Potion, Crosshair, Ping, TPS, Keystrokes, FPS, CPS, and real-time HUDs.
+The following work remains deferred:
+
+- Crosshair, TPS, a standalone CPS card, and real-time HUDs.
 - Force sprint status HUD.
 - Bedwars, Skywars, or other game-mode HUDs.
-- HUD dragging, scaling, snapping, previews, and layout persistence.
-- Deciding whether future HUDs are server-driven NetEase ModUI or local JE client rendering.
-- Defining a server-to-client TPS transport and trust contract.
+- A server-to-client TPS transport and trust contract.
+- A product decision for sharing ownership between local JE HUDs and server-driven NetEase ModUI.
 
 ## AxolotlClient Reference Policy
 

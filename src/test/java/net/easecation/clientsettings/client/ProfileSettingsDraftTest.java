@@ -2,6 +2,8 @@ package net.easecation.clientsettings.client;
 
 import net.easecation.clientsettings.profile.model.ArgbColor;
 import net.easecation.clientsettings.profile.model.FullbrightMode;
+import net.easecation.clientsettings.profile.model.HudSettings;
+import net.easecation.clientsettings.profile.model.HudWidgetId;
 import net.easecation.clientsettings.profile.model.TimeChangerMode;
 import net.easecation.clientsettings.profile.model.ZoomActivation;
 import net.easecation.clientsettings.profile.model.ZoomSettings;
@@ -174,6 +176,48 @@ class ProfileSettingsDraftTest {
 
         assertTrue(profiles.activeSnapshot().features().hitColor().enabled());
         assertEquals(new ArgbColor(0x60123456), profiles.activeSnapshot().features().hitColor().color());
+    }
+
+    @Test
+    void hudChangesRemainInDraftUntilSettingsAreSaved() throws IOException {
+        ProfileManager profiles = manager();
+        ProfileSettingsDraft draft = ProfileSettingsDraft.active(profiles);
+
+        draft.setHudEnabled(HudWidgetId.FPS, true);
+        draft.setHudLayout(HudWidgetId.FPS, 0.4, 0.6, 1.5);
+
+        assertEquals(HudSettings.DEFAULT, profiles.activeSnapshot().features().hud());
+        assertTrue(draft.hudSettings().widget(HudWidgetId.FPS).enabled());
+        assertEquals(0.4, draft.hudSettings().widget(HudWidgetId.FPS).normalizedX());
+        assertEquals(0.6, draft.hudSettings().widget(HudWidgetId.FPS).normalizedY());
+        assertEquals(1.5, draft.hudSettings().widget(HudWidgetId.FPS).scale());
+
+        draft.save(profiles);
+
+        assertEquals(draft.hudSettings(), profiles.activeSnapshot().features().hud());
+    }
+
+    @Test
+    void resettingHudLayoutPreservesDraftEnablement() {
+        ProfileSettingsDraft draft = new ProfileSettingsDraft("default", ProfileDefinition.defaults(true).features());
+        draft.setHudEnabled(HudWidgetId.ARMOR, true);
+        draft.setHudLayout(HudWidgetId.ARMOR, 0.2, 0.8, 2.0);
+
+        draft.resetHudLayout();
+
+        assertTrue(draft.hudSettings().widget(HudWidgetId.ARMOR).enabled());
+        assertEquals(
+                HudSettings.DEFAULT.widget(HudWidgetId.ARMOR).normalizedX(),
+                draft.hudSettings().widget(HudWidgetId.ARMOR).normalizedX()
+        );
+        assertEquals(
+                HudSettings.DEFAULT.widget(HudWidgetId.ARMOR).normalizedY(),
+                draft.hudSettings().widget(HudWidgetId.ARMOR).normalizedY()
+        );
+        assertEquals(
+                HudSettings.DEFAULT.widget(HudWidgetId.ARMOR).scale(),
+                draft.hudSettings().widget(HudWidgetId.ARMOR).scale()
+        );
     }
 
     private ProfileManager manager() throws IOException {

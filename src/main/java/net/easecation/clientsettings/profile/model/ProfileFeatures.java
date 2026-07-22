@@ -7,7 +7,8 @@ public record ProfileFeatures(
         FullbrightSettings fullbright,
         TimeChangerSettings timeChanger,
         ZoomSettings zoom,
-        HitColorSettings hitColor
+        HitColorSettings hitColor,
+        HudSettings hud
 ) {
 
     public static final ProfileFeatures DEFAULT = new ProfileFeatures(
@@ -17,8 +18,21 @@ public record ProfileFeatures(
             FullbrightSettings.DEFAULT,
             TimeChangerSettings.DEFAULT,
             ZoomSettings.DEFAULT,
-            HitColorSettings.DEFAULT
+            HitColorSettings.DEFAULT,
+            HudSettings.DEFAULT
     );
+
+    public ProfileFeatures(
+            ForceSprintSettings forceSprint,
+            BlockOutlineSettings blockOutline,
+            LowFireSettings lowFire,
+            FullbrightSettings fullbright,
+            TimeChangerSettings timeChanger,
+            ZoomSettings zoom,
+            HitColorSettings hitColor
+    ) {
+        this(forceSprint, blockOutline, lowFire, fullbright, timeChanger, zoom, hitColor, HudSettings.DEFAULT);
+    }
 
     public ProfileFeatures {
         forceSprint = ProfileValidation.requireNonNull(forceSprint, "features.forceSprint");
@@ -28,47 +42,54 @@ public record ProfileFeatures(
         timeChanger = ProfileValidation.requireNonNull(timeChanger, "features.timeChanger");
         zoom = ProfileValidation.requireNonNull(zoom, "features.zoom");
         hitColor = ProfileValidation.requireNonNull(hitColor, "features.hitColor");
+        hud = ProfileValidation.requireNonNull(hud, "features.hud");
     }
 
     public ProfileFeatures withForceSprint(boolean enabled) {
         return new ProfileFeatures(
-                new ForceSprintSettings(enabled), blockOutline, lowFire, fullbright, timeChanger, zoom, hitColor
+                new ForceSprintSettings(enabled), blockOutline, lowFire, fullbright, timeChanger, zoom, hitColor, hud
         );
     }
 
     public ProfileFeatures withBlockOutline(BlockOutlineSettings settings) {
         return new ProfileFeatures(
-                forceSprint, settings, lowFire, fullbright, timeChanger, zoom, hitColor
+                forceSprint, settings, lowFire, fullbright, timeChanger, zoom, hitColor, hud
         );
     }
 
     public ProfileFeatures withLowFire(LowFireSettings settings) {
         return new ProfileFeatures(
-                forceSprint, blockOutline, settings, fullbright, timeChanger, zoom, hitColor
+                forceSprint, blockOutline, settings, fullbright, timeChanger, zoom, hitColor, hud
         );
     }
 
     public ProfileFeatures withTimeChanger(TimeChangerSettings settings) {
         return new ProfileFeatures(
-                forceSprint, blockOutline, lowFire, fullbright, settings, zoom, hitColor
+                forceSprint, blockOutline, lowFire, fullbright, settings, zoom, hitColor, hud
         );
     }
 
     public ProfileFeatures withZoom(ZoomSettings settings) {
         return new ProfileFeatures(
-                forceSprint, blockOutline, lowFire, fullbright, timeChanger, settings, hitColor
+                forceSprint, blockOutline, lowFire, fullbright, timeChanger, settings, hitColor, hud
         );
     }
 
     public ProfileFeatures withFullbright(FullbrightSettings settings) {
         return new ProfileFeatures(
-                forceSprint, blockOutline, lowFire, settings, timeChanger, zoom, hitColor
+                forceSprint, blockOutline, lowFire, settings, timeChanger, zoom, hitColor, hud
         );
     }
 
     public ProfileFeatures withHitColor(HitColorSettings settings) {
         return new ProfileFeatures(
-                forceSprint, blockOutline, lowFire, fullbright, timeChanger, zoom, settings
+                forceSprint, blockOutline, lowFire, fullbright, timeChanger, zoom, settings, hud
+        );
+    }
+
+    public ProfileFeatures withHud(HudSettings settings) {
+        return new ProfileFeatures(
+                forceSprint, blockOutline, lowFire, fullbright, timeChanger, zoom, hitColor, settings
         );
     }
 }

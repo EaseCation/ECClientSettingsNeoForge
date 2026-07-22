@@ -40,7 +40,7 @@ class ProfileStoreTest {
     void createsDefaultAndRecoversOrphanInDeterministicOrder() throws IOException {
         ProfileStore store = store();
         ProfileDefinition orphan = new ProfileDefinition(
-                1,
+                ProfileDefinition.CURRENT_SCHEMA_VERSION,
                 "62bd28b8-35ee-4cf4-a0ea-bd6637fca074",
                 "Tournament",
                 ProfileFeatures.DEFAULT
@@ -81,7 +81,7 @@ class ProfileStoreTest {
         ProfileStore store = store();
         store.load(ProfileDefinition.defaults(true));
         ProfileDefinition duplicate = new ProfileDefinition(
-                1,
+                ProfileDefinition.CURRENT_SCHEMA_VERSION,
                 "62bd28b8-35ee-4cf4-a0ea-bd6637fca074",
                 "default",
                 ProfileFeatures.DEFAULT
@@ -102,7 +102,11 @@ class ProfileStoreTest {
         ProfileStore store = store();
         ProfileLoadResult initial = store.load(ProfileDefinition.defaults(true));
         String missingId = "62bd28b8-35ee-4cf4-a0ea-bd6637fca074";
-        ProfileIndex stale = new ProfileIndex(1, missingId, List.of("default", missingId));
+        ProfileIndex stale = new ProfileIndex(
+                ProfileDefinition.CURRENT_SCHEMA_VERSION,
+                missingId,
+                List.of("default", missingId)
+        );
         store.saveIndex(stale);
 
         ProfileLoadResult recovered = store.load(ProfileDefinition.defaults(false));
@@ -116,8 +120,8 @@ class ProfileStoreTest {
     void newerSchemaIsUntouchedAndNeverRewritten() throws IOException {
         Path index = temporaryDirectory.resolve("profiles.json");
         Files.createDirectories(temporaryDirectory);
-        String newer = "{\"schemaVersion\":2,\"activeProfileId\":\"default\","
-                + "\"profileOrder\":[\"default\"]}";
+        String newer = "{\"schemaVersion\":4,"
+                + "\"activeProfileId\":\"default\",\"profileOrder\":[\"default\"]}";
         Files.writeString(index, newer, StandardCharsets.UTF_8);
 
         assertThrows(

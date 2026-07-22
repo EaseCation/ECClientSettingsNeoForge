@@ -7,6 +7,11 @@ import net.easecation.clientsettings.profile.model.LowFireSettings;
 import net.easecation.clientsettings.profile.model.FullbrightMode;
 import net.easecation.clientsettings.profile.model.FullbrightSettings;
 import net.easecation.clientsettings.profile.model.HitColorSettings;
+import net.easecation.clientsettings.profile.model.HudSettings;
+import net.easecation.clientsettings.profile.model.HudWidgetId;
+import net.easecation.clientsettings.profile.model.HudWidgetSettings;
+import net.easecation.clientsettings.profile.model.HudWidgetStyle;
+import net.easecation.clientsettings.profile.model.KeystrokesSettings;
 import net.easecation.clientsettings.profile.model.TimeChangerMode;
 import net.easecation.clientsettings.profile.model.TimeChangerSettings;
 import net.easecation.clientsettings.profile.model.ZoomActivation;
@@ -118,6 +123,70 @@ public final class ProfileSettingsDraft {
                 current.enabled(),
                 new ArgbColor(color)
         ));
+    }
+
+    public HudSettings hudSettings() {
+        return pendingFeatures.hud();
+    }
+
+    public void setHudEnabled(HudWidgetId id, boolean enabled) {
+        setHudSettings(hudSettings().withEnabled(id, enabled));
+    }
+
+    public void setHudWidget(HudWidgetId id, HudWidgetSettings settings) {
+        setHudSettings(hudSettings().withWidget(id, settings));
+    }
+
+    public void setHudLayout(HudWidgetId id, double normalizedX, double normalizedY, double scale) {
+        setHudSettings(hudSettings().withLayout(id, normalizedX, normalizedY, scale));
+    }
+
+    public void setHudStyle(HudWidgetId id, HudWidgetStyle style) {
+        setHudSettings(hudSettings().withStyle(id, style));
+    }
+
+    public void setKeystrokesSettings(KeystrokesSettings settings) {
+        setHudSettings(hudSettings().withKeystrokes(settings));
+    }
+
+    public void restoreHudSettings(HudSettings settings) {
+        setHudSettings(settings);
+    }
+
+    public void resetHudLayout(HudWidgetId id) {
+        HudWidgetSettings current = hudSettings().widget(id);
+        HudWidgetSettings defaults = HudSettings.DEFAULT.widget(id);
+        setHudWidget(id, new HudWidgetSettings(
+                current.enabled(),
+                defaults.normalizedX(),
+                defaults.normalizedY(),
+                defaults.scale(),
+                current.style()
+        ));
+    }
+
+    public void resetHudLayout() {
+        HudSettings reset = hudSettings();
+        for (HudWidgetId id : HudWidgetId.values()) {
+            HudWidgetSettings current = reset.widget(id);
+            HudWidgetSettings defaults = HudSettings.DEFAULT.widget(id);
+            reset = reset.withWidget(id, new HudWidgetSettings(
+                    current.enabled(),
+                    defaults.normalizedX(),
+                    defaults.normalizedY(),
+                    defaults.scale(),
+                    current.style()
+            ));
+        }
+        setHudSettings(reset);
+    }
+
+    public void resetHudStyle(HudWidgetId id) {
+        setHudStyle(id, HudWidgetStyle.defaultsFor(id));
+    }
+
+    private void setHudSettings(HudSettings settings) {
+        pendingFeatures = pendingFeatures.withHud(Objects.requireNonNull(settings, "HUD settings"));
     }
 
     public boolean zoomEnabled() {

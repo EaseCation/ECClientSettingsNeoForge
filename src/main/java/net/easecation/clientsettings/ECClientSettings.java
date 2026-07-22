@@ -5,6 +5,8 @@ import net.easecation.clientsettings.client.ClientSettingsKeyMappings;
 import net.easecation.clientsettings.client.input.ClientInputDispatcher;
 import net.easecation.clientsettings.config.ClientSettingsConfig;
 import net.easecation.clientsettings.feature.blockoutline.BlockOutlineRenderer;
+import net.easecation.clientsettings.feature.hud.HudRenderer;
+import net.easecation.clientsettings.feature.hud.keystrokes.KeystrokesInputTracker;
 import net.easecation.clientsettings.feature.hitcolor.HitColorRuntime;
 import net.easecation.clientsettings.feature.timechanger.TimeChangerRuntime;
 import net.easecation.clientsettings.feature.zoom.ZoomEvents;
@@ -28,6 +30,7 @@ public final class ECClientSettings {
     public ECClientSettings(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.CLIENT, ClientSettingsConfig.SPEC);
         modEventBus.addListener(ClientSettingsKeyMappings::register);
+        modEventBus.addListener(HudRenderer::register);
 
         NeoForge.EVENT_BUS.addListener(ClientInputDispatcher::onClientTick);
         NeoForge.EVENT_BUS.addListener(TimeChangerRuntime::onClientTick);
@@ -41,6 +44,9 @@ public final class ECClientSettings {
         NeoForge.EVENT_BUS.addListener(BlockOutlineRenderer::onRenderHighlight);
         NeoForge.EVENT_BUS.addListener(HitColorRuntime::onClientTick);
         NeoForge.EVENT_BUS.addListener(HitColorRuntime::onClientStopping);
+        NeoForge.EVENT_BUS.addListener(KeystrokesInputTracker::onMouseButton);
+        NeoForge.EVENT_BUS.addListener(KeystrokesInputTracker::onLoggingOut);
+        NeoForge.EVENT_BUS.addListener(KeystrokesInputTracker::onClientStopping);
         NeoForge.EVENT_BUS.addListener(ClientSettingsEvents::onScreenKeyPressed);
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, ClientSettingsEvents::onScreenInit);
         NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onModEvent);

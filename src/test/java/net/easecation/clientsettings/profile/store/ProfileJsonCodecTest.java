@@ -1,12 +1,14 @@
 package net.easecation.clientsettings.profile.store;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import net.easecation.clientsettings.profile.model.HudWidgetId;
 import net.easecation.clientsettings.profile.model.ProfileDefinition;
 import net.easecation.clientsettings.profile.model.ProfileIndex;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -17,11 +19,40 @@ class ProfileJsonCodecTest {
 
     @Test
     void roundTripsProfileAndIndex() throws IOException {
-        ProfileDefinition profile = ProfileDefinition.defaults(false).withName("  Tournament  ");
-        ProfileIndex index = new ProfileIndex(1, "default", List.of("default"));
+        ProfileDefinition defaults = ProfileDefinition.defaults(false);
+        ProfileDefinition profile = defaults
+                .withName("  Tournament  ")
+                .withFeatures(defaults.features().withHud(
+                        defaults.features().hud()
+                                .withEnabled(HudWidgetId.ARMOR, true)
+                                .withLayout(HudWidgetId.ARMOR, 0.25, 0.75, 1.25)
+                ));
+        ProfileIndex index = ProfileIndex.defaults();
 
         assertEquals(profile, codec.decodeProfile(codec.encodeProfile(profile)));
         assertEquals(index, codec.decodeIndex(codec.encodeIndex(index)));
+    }
+
+    @Test
+    void requiresCurrentSchemaAndCompleteHudData() {
+        JsonObject currentWithoutHud = encodedProfile(ProfileDefinition.defaults(false));
+        currentWithoutHud.getAsJsonObject("features").remove("hud");
+        JsonObject oldSchema = encodedProfile(ProfileDefinition.defaults(false));
+        oldSchema.addProperty("schemaVersion", 2);
+
+        assertThrows(IOException.class, () -> codec.decodeProfile(bytes(currentWithoutHud)));
+        assertThrows(IOException.class, () -> codec.decodeProfile(bytes(oldSchema)));
+    }
+
+    @Test
+    void rejectsOutOfRangeHudValues() {
+        JsonObject profile = encodedProfile(ProfileDefinition.defaults(false));
+        profile.getAsJsonObject("features")
+                .getAsJsonObject("hud")
+                .getAsJsonObject("fps")
+                .addProperty("scale", 3.01);
+
+        assertThrows(IOException.class, () -> codec.decodeProfile(bytes(profile)));
     }
 
     @Test
@@ -37,13 +68,22 @@ class ProfileJsonCodecTest {
 
     @Test
     void distinguishesNewerSchemaFromCorruption() {
-        String newer = "{\"schemaVersion\":2,\"activeProfileId\":\"default\","
-                + "\"profileOrder\":[\"default\"]}";
+        String newer = "{\"schemaVersion\":4,"
+                + "\"activeProfileId\":\"default\",\"profileOrder\":[\"default\"]}";
 
         UnsupportedProfileSchemaException exception = assertThrows(
                 UnsupportedProfileSchemaException.class,
                 () -> codec.decodeIndex(newer.getBytes(StandardCharsets.UTF_8))
         );
-        assertEquals(2, exception.schemaVersion());
+        assertEquals(4, exception.schemaVersion());
+    }
+
+    private JsonObject encodedProfile(ProfileDefinition profile) {
+        return JsonParser.parseString(new String(codec.encodeProfile(profile), StandardCharsets.UTF_8))
+                .getAsJsonObject();
+    }
+
+    private static byte[] bytes(JsonObject object) {
+        return object.toString().getBytes(StandardCharsets.UTF_8);
     }
 }

@@ -3,6 +3,7 @@ package net.easecation.clientsettings.client;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
+import me.shedaniel.clothconfig2.api.AbstractConfigEntry;
 import net.easecation.clientsettings.ECClientSettings;
 import net.easecation.clientsettings.config.ClientSettingsConfig;
 import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
@@ -10,6 +11,8 @@ import net.easecation.clientsettings.profile.model.LowFireSettings;
 import net.easecation.clientsettings.profile.model.FullbrightMode;
 import net.easecation.clientsettings.profile.model.FullbrightSettings;
 import net.easecation.clientsettings.profile.model.HitColorSettings;
+import net.easecation.clientsettings.profile.model.HudSettings;
+import net.easecation.clientsettings.profile.model.HudWidgetId;
 import net.easecation.clientsettings.profile.model.TimeChangerMode;
 import net.easecation.clientsettings.profile.model.TimeChangerSettings;
 import net.easecation.clientsettings.profile.model.ZoomActivation;
@@ -22,6 +25,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public final class ClientSettingsScreen {
@@ -31,9 +36,13 @@ public final class ClientSettingsScreen {
 
     public static Screen create(Screen parent) {
         ProfileManager profiles = ProfileServices.manager();
+        return create(parent, ProfileSettingsDraft.active(profiles));
+    }
+
+    static Screen create(Screen parent, ProfileSettingsDraft draft) {
         return create(
                 parent,
-                ProfileSettingsDraft.active(profiles),
+                draft,
                 ClientSettingsConfig.allowServerWindowTitle(),
                 ClientSettingsConfig.allowServerWindowFrame(),
                 null
@@ -58,6 +67,7 @@ public final class ClientSettingsScreen {
         addProfileCategory(builder, entries, parent, profiles, draft, saveError);
         addMovementCategory(builder, entries, draft);
         addCombatCategory(builder, entries);
+        addHudCategory(builder, entries, draft);
         addRenderingCategory(builder, entries, draft);
         addServerPermissionsCategory(builder, entries, allowTitle, allowFrame);
 
@@ -144,6 +154,36 @@ public final class ClientSettingsScreen {
                 .setTooltip(Component.translatable("option.ecclientsettings.sword_blocking_animation.tooltip"))
                 .setSaveConsumer(ClientSettingsConfig.SWORD_BLOCKING_ANIMATION::set)
                 .build());
+    }
+
+    private static void addHudCategory(
+            ConfigBuilder builder,
+            ConfigEntryBuilder entries,
+            ProfileSettingsDraft draft
+    ) {
+        ConfigCategory category = builder.getOrCreateCategory(
+                Component.translatable("category.ecclientsettings.hud")
+        );
+        category.addEntry(entries.startTextDescription(
+                Component.translatable("option.ecclientsettings.hud.description")
+        ).build());
+        List<AbstractConfigEntry<?>> hudControls = new ArrayList<>();
+        category.addEntry(new HudEditorEntry(draft, hudControls));
+        for (HudWidgetId id : HudWidgetId.values()) {
+            String name = id.serializedName();
+            var enabledControl = entries.startBooleanToggle(
+                            Component.translatable("option.ecclientsettings.hud." + name + ".enabled"),
+                            draft.hudSettings().widget(id).enabled()
+                    )
+                    .setDefaultValue(HudSettings.DEFAULT.widget(id).enabled())
+                    .setTooltip(Component.translatable(
+                            "option.ecclientsettings.hud." + name + ".enabled.tooltip"
+                    ))
+                    .setSaveConsumer(enabled -> draft.setHudEnabled(id, enabled))
+                    .build();
+            hudControls.add(enabledControl);
+            category.addEntry(enabledControl);
+        }
     }
 
     private static void addServerPermissionsCategory(
