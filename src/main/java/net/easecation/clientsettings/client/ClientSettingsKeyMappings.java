@@ -10,7 +10,7 @@ public final class ClientSettingsKeyMappings {
     public static final KeyMapping OPEN_SETTINGS = new KeyMapping(
             "key.ecclientsettings.open_settings",
             InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_HOME,
+            GLFW.GLFW_KEY_RIGHT_SHIFT,
             "key.categories.ecclientsettings"
     );
     public static final KeyMapping TOGGLE_FORCE_SPRINT = new KeyMapping(

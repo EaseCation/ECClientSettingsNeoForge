@@ -1,7 +1,6 @@
 package net.easecation.clientsettings.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import net.easecation.clientsettings.ECClientSettings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.PauseScreen;
@@ -10,8 +9,10 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 
 public final class ClientSettingsEvents {
 
-    private static final Component MODS_BUTTON = Component.translatable("fml.menu.mods");
     private static final Component SETTINGS_BUTTON = Component.translatable("button.ecclientsettings.open");
+    static final int PAUSE_BUTTON_WIDTH = 100;
+    static final int PAUSE_BUTTON_HEIGHT = 20;
+    static final int PAUSE_BUTTON_MARGIN = 6;
 
     private ClientSettingsEvents() {
     }
@@ -42,23 +43,20 @@ public final class ClientSettingsEvents {
             return;
         }
 
-        Button modsButton = event.getListenersList().stream()
-                .filter(Button.class::isInstance)
-                .map(Button.class::cast)
-                .filter(button -> MODS_BUTTON.equals(button.getMessage()))
-                .findFirst()
-                .orElse(null);
-        if (modsButton == null) {
-            ECClientSettings.LOGGER.warn("Could not find the pause-menu Mods button; Home remains available");
-            return;
-        }
-
-        modsButton.setWidth(98);
         event.addListener(Button.builder(
                         SETTINGS_BUTTON,
                         button -> Minecraft.getInstance().setScreen(ClientSettingsScreen.create(pauseScreen))
                 )
-                .bounds(modsButton.getX() + 106, modsButton.getY(), 98, 20)
+                .bounds(
+                        pauseButtonX(pauseScreen.width),
+                        PAUSE_BUTTON_MARGIN,
+                        PAUSE_BUTTON_WIDTH,
+                        PAUSE_BUTTON_HEIGHT
+                )
                 .build());
+    }
+
+    static int pauseButtonX(int screenWidth) {
+        return Math.max(PAUSE_BUTTON_MARGIN, screenWidth - PAUSE_BUTTON_MARGIN - PAUSE_BUTTON_WIDTH);
     }
 }

@@ -10,6 +10,7 @@ import net.easecation.clientsettings.feature.timechanger.TimeChangerRuntime;
 import net.easecation.clientsettings.feature.zoom.ZoomEvents;
 import net.easecation.clientsettings.window.WindowAppearanceEvents;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -41,7 +42,7 @@ public final class ECClientSettings {
         NeoForge.EVENT_BUS.addListener(HitColorRuntime::onClientTick);
         NeoForge.EVENT_BUS.addListener(HitColorRuntime::onClientStopping);
         NeoForge.EVENT_BUS.addListener(ClientSettingsEvents::onScreenKeyPressed);
-        NeoForge.EVENT_BUS.addListener(ClientSettingsEvents::onScreenInit);
+        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, ClientSettingsEvents::onScreenInit);
         NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onModEvent);
         NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onDisconnected);
 
