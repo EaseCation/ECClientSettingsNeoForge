@@ -40,15 +40,21 @@ final class ObsOverlayRenderer implements AutoCloseable {
     private final GuiRenderer overlayGuiRenderer;
     private final TextureTarget guiTarget;
     private final TextureTarget worldTarget;
+    private final TextureTarget publicAliasTarget;
     private final TextureTarget discardTarget;
     private final RawOverlayCompositor compositor = new RawOverlayCompositor();
     private final ArrayDeque<WorldRedirect> worldRedirects = new ArrayDeque<>();
     private boolean guiDirty;
     private boolean worldDirty;
+    private boolean publicAliasDirty;
     private boolean guiTargetPrepared;
     private boolean worldTargetPrepared;
+    private boolean publicAliasTargetPrepared;
     private boolean discardTargetPrepared;
     private boolean worldDepthInitialized;
+    private boolean publicAliasDepthInitialized;
+    private boolean publicFramePrepared;
+    private boolean publicAliasPresented;
     private boolean sceneDepthReady;
     private boolean depthCopyWarningLogged;
     private GpuTexture sceneDepthTexture;
@@ -62,6 +68,7 @@ final class ObsOverlayRenderer implements AutoCloseable {
         int height = Math.max(1, minecraft.getMainRenderTarget().height);
         guiTarget = new TextureTarget("EC OBS GUI overlay", width, height, true);
         worldTarget = new TextureTarget("EC OBS world overlay", width, height, true);
+        publicAliasTarget = new TextureTarget("EC OBS public player aliases", width, height, true);
         discardTarget = new TextureTarget("EC OBS discarded content", 1, 1, true);
         overlayGuiRenderer = new GuiRenderer(
                 overlayGuiState,
@@ -81,12 +88,18 @@ final class ObsOverlayRenderer implements AutoCloseable {
         int height = Math.max(1, minecraft.getMainRenderTarget().height);
         ensureSize(guiTarget, width, height);
         ensureSize(worldTarget, width, height);
+        ensureSize(publicAliasTarget, width, height);
         guiDirty = false;
         worldDirty = false;
+        publicAliasDirty = false;
         guiTargetPrepared = false;
         worldTargetPrepared = false;
+        publicAliasTargetPrepared = false;
         discardTargetPrepared = false;
         worldDepthInitialized = false;
+        publicAliasDepthInitialized = false;
+        publicFramePrepared = false;
+        publicAliasPresented = false;
         sceneDepthReady = false;
     }
 
@@ -136,32 +149,51 @@ final class ObsOverlayRenderer implements AutoCloseable {
         state.restore();
     }
 
-    void beginWorld(boolean composite, WorldGraphicsState graphicsState) {
+    void beginWorld(WorldDestination worldDestination, WorldGraphicsState graphicsState) {
         GpuTextureView previousColor = RenderSystem.outputColorTextureOverride;
         GpuTextureView previousDepth = RenderSystem.outputDepthTextureOverride;
-        TextureTarget destination = composite ? worldTarget : discardTarget;
+        TextureTarget destination = switch (worldDestination) {
+            case PRIVATE_OVERLAY -> worldTarget;
+            case PUBLIC_ALIAS -> publicAliasTarget;
+            case DISCARD -> discardTarget;
+        };
+        boolean composite = worldDestination != WorldDestination.DISCARD;
         GpuTextureView sourceColor = previousColor != null
                 ? previousColor
                 : minecraft.getMainRenderTarget().getColorTextureView();
         if (composite && sourceColor != null) {
             boolean resized = ensureSize(destination, sourceColor.getWidth(0), sourceColor.getHeight(0));
             if (resized) {
-                worldTargetPrepared = false;
-                worldDepthInitialized = false;
+                if (worldDestination == WorldDestination.PUBLIC_ALIAS) {
+                    publicAliasTargetPrepared = false;
+                    publicAliasDepthInitialized = false;
+                } else {
+                    worldTargetPrepared = false;
+                    worldDepthInitialized = false;
+                }
             }
         }
-        prepareWorldTarget(destination, composite);
+        prepareWorldTarget(destination, worldDestination);
         GpuTextureView sourceDepth = previousDepth != null
                 ? previousDepth
                 : minecraft.getMainRenderTarget().getDepthTextureView();
-        if (composite && !worldDepthInitialized) {
+        boolean depthInitialized = worldDestination == WorldDestination.PUBLIC_ALIAS
+                ? publicAliasDepthInitialized
+                : worldDepthInitialized;
+        if (composite && !depthInitialized) {
             copyDepthIfCompatible(sourceDepth, destination);
-            worldDepthInitialized = true;
+            if (worldDestination == WorldDestination.PUBLIC_ALIAS) {
+                publicAliasDepthInitialized = true;
+            } else {
+                worldDepthInitialized = true;
+            }
         }
         worldRedirects.push(new WorldRedirect(previousColor, previousDepth, graphicsState));
         RenderSystem.outputColorTextureOverride = destination.getColorTextureView();
         RenderSystem.outputDepthTextureOverride = destination.getDepthTextureView();
-        if (composite) {
+        if (worldDestination == WorldDestination.PUBLIC_ALIAS) {
+            publicAliasDirty = true;
+        } else if (worldDestination == WorldDestination.PRIVATE_OVERLAY) {
             worldDirty = true;
         }
     }
@@ -212,7 +244,7 @@ final class ObsOverlayRenderer implements AutoCloseable {
     }
 
     void backupSceneDepth() {
-        if (!worldDirty) {
+        if (!worldDirty && !publicAliasDirty) {
             return;
         }
         RenderTarget mainTarget = minecraft.getMainRenderTarget();
@@ -243,8 +275,60 @@ final class ObsOverlayRenderer implements AutoCloseable {
         return renderer == overlayGuiRenderer ? guiTarget : original;
     }
 
-    void composite() {
-        compositor.composite(
+    boolean preparePublicFrame() {
+        int width = minecraft.getWindow().getWidth();
+        int height = minecraft.getWindow().getHeight();
+        if (width <= 0 || height <= 0) {
+            publicFramePrepared = false;
+            publicAliasPresented = false;
+            return false;
+        }
+        boolean aliasDrawn = publicAliasDirty;
+        // Every swap starts from a known clean frame. This also covers minimized frames and the
+        // recursive second swap performed while toggling fullscreen.
+        publicAliasPresented = true;
+        compositor.restoreAndComposite(
+                minecraft.getMainRenderTarget(),
+                true,
+                sceneDepthReady ? sceneDepthTexture : null,
+                publicAliasTarget,
+                aliasDrawn,
+                guiTarget,
+                false,
+                width,
+                height
+        );
+        publicFramePrepared = true;
+        // A successful clean-only replace needs no second restore after OBS capture. On an
+        // exception the earlier true value forces the native callback to scrub the buffer again.
+        publicAliasPresented = aliasDrawn;
+        return true;
+    }
+
+    boolean composite(boolean allowPrivateOverlays) {
+        boolean prepared = publicFramePrepared;
+        boolean restorePublicAlias = publicAliasPresented;
+        publicFramePrepared = false;
+        publicAliasPresented = false;
+        if (!allowPrivateOverlays || !prepared) {
+            if (restorePublicAlias || allowPrivateOverlays) {
+                compositor.restoreAndComposite(
+                        minecraft.getMainRenderTarget(),
+                        true,
+                        null,
+                        worldTarget,
+                        false,
+                        guiTarget,
+                        false,
+                        minecraft.getWindow().getWidth(),
+                        minecraft.getWindow().getHeight()
+                );
+            }
+            return prepared;
+        }
+        compositor.restoreAndComposite(
+                minecraft.getMainRenderTarget(),
+                restorePublicAlias,
                 sceneDepthReady ? sceneDepthTexture : null,
                 worldTarget,
                 worldDirty,
@@ -253,6 +337,7 @@ final class ObsOverlayRenderer implements AutoCloseable {
                 minecraft.getWindow().getWidth(),
                 minecraft.getWindow().getHeight()
         );
+        return true;
     }
 
     private boolean copyDepthIfCompatible(GpuTextureView sourceView, RenderTarget destination) {
@@ -332,15 +417,20 @@ final class ObsOverlayRenderer implements AutoCloseable {
         }
     }
 
-    private void prepareWorldTarget(TextureTarget target, boolean composite) {
-        if (composite ? worldTargetPrepared : discardTargetPrepared) {
+    private void prepareWorldTarget(TextureTarget target, WorldDestination destination) {
+        boolean prepared = switch (destination) {
+            case PRIVATE_OVERLAY -> worldTargetPrepared;
+            case PUBLIC_ALIAS -> publicAliasTargetPrepared;
+            case DISCARD -> discardTargetPrepared;
+        };
+        if (prepared) {
             return;
         }
         clear(target);
-        if (composite) {
-            worldTargetPrepared = true;
-        } else {
-            discardTargetPrepared = true;
+        switch (destination) {
+            case PRIVATE_OVERLAY -> worldTargetPrepared = true;
+            case PUBLIC_ALIAS -> publicAliasTargetPrepared = true;
+            case DISCARD -> discardTargetPrepared = true;
         }
     }
 
@@ -377,6 +467,7 @@ final class ObsOverlayRenderer implements AutoCloseable {
         overlayGuiRenderer.close();
         guiTarget.destroyBuffers();
         worldTarget.destroyBuffers();
+        publicAliasTarget.destroyBuffers();
         discardTarget.destroyBuffers();
         destroySceneDepthTexture();
         compositor.close();
@@ -387,6 +478,12 @@ final class ObsOverlayRenderer implements AutoCloseable {
             GpuTextureView depth,
             WorldGraphicsState graphicsState
     ) {
+    }
+
+    enum WorldDestination {
+        PRIVATE_OVERLAY,
+        PUBLIC_ALIAS,
+        DISCARD
     }
 
     record WorldGraphicsState(

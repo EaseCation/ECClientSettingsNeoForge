@@ -114,7 +114,11 @@ final class ObsOverlayStatusEntry extends TooltipListEntry<Object> {
         content.add(Component.translatable(
                 "option.ecclientsettings.obs_overlay.saved_configuration",
                 yesNo(settings.enabled()),
-                yesNo(settings.showTestMarker())
+                yesNo(settings.showTestMarker()),
+                Component.translatable(
+                        "option.ecclientsettings.obs_overlay.player_name_tags.mode."
+                                + settings.playerNameTagMode().name().toLowerCase(Locale.ROOT)
+                )
         ));
         if (!settings.enabled()) {
             content.add(Component.translatable(

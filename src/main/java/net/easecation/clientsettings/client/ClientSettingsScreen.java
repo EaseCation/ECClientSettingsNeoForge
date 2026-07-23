@@ -11,6 +11,9 @@ import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayComponent;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayRuntime;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayScreen;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlaySettings;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerAliasColorMode;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerAliasFormat;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerNameTagMode;
 import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
 import net.easecation.clientsettings.profile.model.LowFireSettings;
 import net.easecation.clientsettings.profile.model.FullbrightMode;
@@ -257,11 +260,73 @@ public final class ClientSettingsScreen {
                 Component.translatable("option.ecclientsettings.obs_overlay.group.world")
         );
         world.add(entries.startTextDescription(
+                Component.translatable("option.ecclientsettings.obs_overlay.player_name_tags.description")
+        ).build());
+        world.add(entries.startEnumSelector(
+                        Component.translatable("option.ecclientsettings.obs_overlay.player_name_tags.mode"),
+                        PlayerNameTagMode.class,
+                        draft.playerNameTagMode()
+                )
+                .setDefaultValue(ObsOverlaySettings.DEFAULT.playerNameTagMode())
+                .setEnumNameProvider(mode -> Component.translatable(
+                        "option.ecclientsettings.obs_overlay.player_name_tags.mode."
+                                + mode.name().toLowerCase(Locale.ROOT)
+                ))
+                .setTooltip(Component.translatable(
+                        "option.ecclientsettings.obs_overlay.player_name_tags.mode.tooltip"
+                ))
+                .setSaveConsumer(draft::setPlayerNameTagMode)
+                .build());
+        world.add(entries.startEnumSelector(
+                        Component.translatable("option.ecclientsettings.obs_overlay.player_alias.format"),
+                        PlayerAliasFormat.class,
+                        draft.playerAliasFormat()
+                )
+                .setDefaultValue(ObsOverlaySettings.DEFAULT.playerAliasFormat())
+                .setEnumNameProvider(format -> Component.translatable(
+                        "option.ecclientsettings.obs_overlay.player_alias.format."
+                                + format.name().toLowerCase(Locale.ROOT)
+                ))
+                .setTooltip(Component.translatable(
+                        "option.ecclientsettings.obs_overlay.player_alias.format.tooltip"
+                ))
+                .setSaveConsumer(draft::setPlayerAliasFormat)
+                .build());
+        world.add(entries.startEnumSelector(
+                        Component.translatable("option.ecclientsettings.obs_overlay.player_alias.color_mode"),
+                        PlayerAliasColorMode.class,
+                        draft.playerAliasColorMode()
+                )
+                .setDefaultValue(ObsOverlaySettings.DEFAULT.playerAliasColorMode())
+                .setEnumNameProvider(colorMode -> Component.translatable(
+                        "option.ecclientsettings.obs_overlay.player_alias.color_mode."
+                                + colorMode.name().toLowerCase(Locale.ROOT)
+                ))
+                .setTooltip(Component.translatable(
+                        "option.ecclientsettings.obs_overlay.player_alias.color_mode.tooltip"
+                ))
+                .setSaveConsumer(draft::setPlayerAliasColorMode)
+                .build());
+        world.add(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.obs_overlay.player_name_tags.auto_hide"),
+                        draft.playerNameTagsAutoHide()
+                )
+                .setDefaultValue(ObsOverlaySettings.DEFAULT.playerNameTagsAutoHide())
+                .setTooltip(Component.translatable(
+                        "option.ecclientsettings.obs_overlay.player_name_tags.auto_hide.tooltip"
+                ))
+                .setSaveConsumer(draft::setPlayerNameTagsAutoHide)
+                .build());
+        world.add(entries.startTextDescription(
+                Component.translatable("option.ecclientsettings.obs_overlay.player_name_tags.compatibility")
+                        .withStyle(ChatFormatting.GOLD)
+        ).build());
+        world.add(entries.startTextDescription(
                 Component.translatable("option.ecclientsettings.obs_overlay.world.experimental")
                         .withStyle(ChatFormatting.GOLD)
         ).build());
         for (ObsOverlayComponent component : ObsOverlayComponent.values()) {
-            if (component.group() == ObsOverlayComponent.Group.WORLD) {
+            if (component.group() == ObsOverlayComponent.Group.WORLD && !component.internal()) {
                 world.add(componentToggle(entries, draft, component));
             }
         }
@@ -324,7 +389,7 @@ public final class ClientSettingsScreen {
                 Component.translatable("option.ecclientsettings.obs_overlay.auto_hide.description")
         ).build());
         for (ObsOverlayComponent component : ObsOverlayComponent.values()) {
-            if (component.autoHideSupported()) {
+            if (!component.internal() && component.autoHideSupported()) {
                 autoHide.add(entries.startBooleanToggle(
                                 Component.translatable(
                                         "option.ecclientsettings.obs_overlay.auto_hide.component",

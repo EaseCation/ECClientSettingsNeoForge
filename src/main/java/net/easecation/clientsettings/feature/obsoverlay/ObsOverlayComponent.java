@@ -12,8 +12,7 @@ public enum ObsOverlayComponent {
     STATUS_EFFECTS("status_effects", Group.HUD, false, true),
     MAIN_HUD("main_hud", Group.HUD, false, true),
     EC_HUD("ec_hud", Group.HUD, false, true),
-    NAME_TAGS("name_tags", Group.WORLD, false, true),
-    SNEAKING_NAME_TAGS("sneaking_name_tags", Group.WORLD, false, true),
+    PLAYER_NAME_TAGS("player_name_tags", Group.WORLD, false, true),
     SIGN_TEXT("sign_text", Group.WORLD, false, true),
     CHESTS("chests", Group.WORLD, false, true),
     ITEM_FRAME_MAPS("item_frame_maps", Group.WORLD, false, true),
@@ -46,6 +45,10 @@ public enum ObsOverlayComponent {
 
     public boolean autoHideSupported() {
         return autoHideSupported;
+    }
+
+    public boolean internal() {
+        return this == PLAYER_NAME_TAGS;
     }
 
     public enum Group {

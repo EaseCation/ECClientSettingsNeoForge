@@ -4,6 +4,9 @@ import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayComponent;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayRuntime;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayScreen;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlaySettings;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerAliasColorMode;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerAliasFormat;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerNameTagMode;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.EnumMap;
@@ -18,6 +21,10 @@ public final class ObsOverlayConfig {
     private static final ModConfigSpec.BooleanValue ENABLED;
     private static final ModConfigSpec.BooleanValue SHOW_TEST_MARKER;
     private static final ModConfigSpec.BooleanValue FAIL_CLOSED;
+    private static final ModConfigSpec.EnumValue<PlayerNameTagMode> PLAYER_NAME_TAG_MODE;
+    private static final ModConfigSpec.EnumValue<PlayerAliasFormat> PLAYER_ALIAS_FORMAT;
+    private static final ModConfigSpec.EnumValue<PlayerAliasColorMode> PLAYER_ALIAS_COLOR_MODE;
+    private static final ModConfigSpec.BooleanValue PLAYER_NAME_TAGS_AUTO_HIDE;
     private static final Map<ObsOverlayComponent, ModConfigSpec.BooleanValue> COMPONENTS =
             new EnumMap<>(ObsOverlayComponent.class);
     private static final Map<ObsOverlayComponent, ModConfigSpec.BooleanValue> AUTO_HIDE =
@@ -37,18 +44,34 @@ public final class ObsOverlayConfig {
         ENABLED = builder.define("enabled", ObsOverlaySettings.DEFAULT.enabled());
         SHOW_TEST_MARKER = builder.define("showTestMarker", ObsOverlaySettings.DEFAULT.showTestMarker());
         FAIL_CLOSED = builder
-                .comment("Hide protected elements locally if the native capture hook is unavailable or unsafe.")
+                .comment("Prevent protected data from returning to the public frame when capture is unsafe.")
                 .define("failClosed", ObsOverlaySettings.DEFAULT.failClosed());
+
+        builder.comment("Player-only name-tag privacy. Normal and sneaking names always use the same mode.")
+                .push("playerNames");
+        PLAYER_NAME_TAG_MODE = builder.defineEnum("mode", ObsOverlaySettings.DEFAULT.playerNameTagMode());
+        PLAYER_ALIAS_FORMAT = builder.defineEnum("aliasFormat", ObsOverlaySettings.DEFAULT.playerAliasFormat());
+        PLAYER_ALIAS_COLOR_MODE = builder.defineEnum(
+                "aliasColorMode",
+                ObsOverlaySettings.DEFAULT.playerAliasColorMode()
+        );
+        PLAYER_NAME_TAGS_AUTO_HIDE = builder.define(
+                "autoHideWhenScreenOpen",
+                ObsOverlaySettings.DEFAULT.playerNameTagsAutoHide()
+        );
+        builder.pop();
 
         builder.push("components");
         for (ObsOverlayComponent component : ObsOverlayComponent.values()) {
-            COMPONENTS.put(component, builder.define(component.serializedName(), component.defaultEnabled()));
+            if (!component.internal()) {
+                COMPONENTS.put(component, builder.define(component.serializedName(), component.defaultEnabled()));
+            }
         }
         builder.pop();
 
         builder.push("autoHide");
         for (ObsOverlayComponent component : ObsOverlayComponent.values()) {
-            if (component.autoHideSupported()) {
+            if (!component.internal() && component.autoHideSupported()) {
                 AUTO_HIDE.put(component, builder.define(component.serializedName(), true));
             }
         }
@@ -86,6 +109,10 @@ public final class ObsOverlayConfig {
         ENABLED.set(settings.enabled());
         SHOW_TEST_MARKER.set(settings.showTestMarker());
         FAIL_CLOSED.set(settings.failClosed());
+        PLAYER_NAME_TAG_MODE.set(settings.playerNameTagMode());
+        PLAYER_ALIAS_FORMAT.set(settings.playerAliasFormat());
+        PLAYER_ALIAS_COLOR_MODE.set(settings.playerAliasColorMode());
+        PLAYER_NAME_TAGS_AUTO_HIDE.set(settings.playerNameTagsAutoHide());
         COMPONENTS.forEach((component, value) -> value.set(settings.components().get(component)));
         AUTO_HIDE.forEach((component, value) -> value.set(settings.autoHide().get(component)));
         HIDE_ALL_IN_GAME_SCREENS.set(settings.hideAllInGameScreens());
@@ -101,7 +128,8 @@ public final class ObsOverlayConfig {
         EnumMap<ObsOverlayComponent, Boolean> components = new EnumMap<>(ObsOverlayComponent.class);
         EnumMap<ObsOverlayComponent, Boolean> autoHide = new EnumMap<>(ObsOverlayComponent.class);
         for (ObsOverlayComponent component : ObsOverlayComponent.values()) {
-            components.put(component, COMPONENTS.get(component).get());
+            ModConfigSpec.BooleanValue componentValue = COMPONENTS.get(component);
+            components.put(component, componentValue != null && componentValue.get());
             ModConfigSpec.BooleanValue autoHideValue = AUTO_HIDE.get(component);
             autoHide.put(component, autoHideValue != null && autoHideValue.get());
         }
@@ -111,6 +139,10 @@ public final class ObsOverlayConfig {
                 ENABLED.get(),
                 SHOW_TEST_MARKER.get(),
                 FAIL_CLOSED.get(),
+                PLAYER_NAME_TAG_MODE.get(),
+                PLAYER_ALIAS_FORMAT.get(),
+                PLAYER_ALIAS_COLOR_MODE.get(),
+                PLAYER_NAME_TAGS_AUTO_HIDE.get(),
                 components,
                 autoHide,
                 HIDE_ALL_IN_GAME_SCREENS.get(),

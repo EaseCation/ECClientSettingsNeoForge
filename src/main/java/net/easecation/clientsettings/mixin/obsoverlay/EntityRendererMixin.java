@@ -1,58 +1,110 @@
 package net.easecation.clientsettings.mixin.obsoverlay;
 
-import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayComponent;
+import net.easecation.clientsettings.config.ObsOverlayConfig;
+import net.easecation.clientsettings.feature.obsoverlay.DeferredNameTagPass;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayRuntime;
+import net.easecation.clientsettings.feature.obsoverlay.ObsOverlaySettings;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerAliasService;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerNameTagMode;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerNameTagRenderPlan;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerNameTagRenderState;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.RenderNameTagEvent;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 
-import java.util.ArrayDeque;
-
 @Mixin(EntityRenderer.class)
 abstract class EntityRendererMixin {
 
-    @Unique
-    private final ArrayDeque<MultiBufferSource> ecclientsettings$nameTagScopes = new ArrayDeque<>();
-
-    @WrapMethod(
-            method = "render(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
+    @ModifyExpressionValue(
+            method = "extractRenderState",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/entity/EntityRenderer;getNameTag(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/network/chat/Component;"
+            )
     )
-    private void ecclientsettings$guardNameTagScopes(
+    private Component ecclientsettings$preparePlayerNameTag(
+            @Nullable Component originalName,
+            Entity entity,
             EntityRenderState state,
-            PoseStack poseStack,
-            MultiBufferSource buffers,
-            int packedLight,
-            Operation<Void> original
+            float partialTick
     ) {
-        int baseline = ecclientsettings$nameTagScopes.size();
-        try {
-            original.call(state, poseStack, buffers, packedLight);
-        } finally {
-            while (ecclientsettings$nameTagScopes.size() > baseline) {
-                ecclientsettings$closeNameTagScope();
-            }
+        PlayerNameTagRenderState playerNameState = (PlayerNameTagRenderState) state;
+        if (!(entity instanceof Player player)) {
+            playerNameState.ecclientsettings$clearPlayerNameTagState();
+            return originalName;
         }
+
+        ObsOverlaySettings settings = ObsOverlayConfig.current();
+        PlayerNameTagMode mode = settings.effectivePlayerNameTagMode();
+        if (mode == PlayerNameTagMode.UNCHANGED) {
+            playerNameState.ecclientsettings$clearPlayerNameTagState();
+            return originalName;
+        }
+
+        Component alias = mode == PlayerNameTagMode.PSEUDONYMIZE
+                ? PlayerAliasService.aliasFor(player, settings.playerAliasFormat(), settings.playerAliasColorMode())
+                : null;
+        playerNameState.ecclientsettings$setPlayerNameTagState(mode, originalName, alias);
+
+        // CanRender listeners must never receive the real name as originalContent in alias mode.
+        return alias != null ? alias : originalName;
     }
 
     @WrapOperation(
-            method = "render",
+            method = "extractRenderState",
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/neoforged/bus/api/IEventBus;post(Lnet/neoforged/bus/api/Event;)Lnet/neoforged/bus/api/Event;"
             )
     )
-    private Event ecclientsettings$protectNameTagEvent(
+    private Event ecclientsettings$keepAliasAfterCanRenderListeners(
+            IEventBus eventBus,
+            Event event,
+            Operation<Event> original
+    ) {
+        Event posted = original.call(eventBus, event);
+        if (posted instanceof RenderNameTagEvent.CanRender nameTagEvent
+                && nameTagEvent.getEntityRenderState() instanceof PlayerNameTagRenderState playerNameState) {
+            PlayerNameTagMode mode = playerNameState.ecclientsettings$getPlayerNameTagMode();
+            if (mode == PlayerNameTagMode.PSEUDONYMIZE) {
+                Component alias = playerNameState.ecclientsettings$getPlayerNameTagAlias();
+                if (alias != null) {
+                    nameTagEvent.setContent(alias);
+                }
+            } else if (mode == PlayerNameTagMode.HIDE) {
+                // Keep compatible private formatting supplied by CanRender listeners.
+                playerNameState.ecclientsettings$setPlayerNameTagState(
+                        mode,
+                        nameTagEvent.getContent(),
+                        null
+                );
+            }
+        }
+        return posted;
+    }
+
+    @WrapOperation(
+            method = "render(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/neoforged/bus/api/IEventBus;post(Lnet/neoforged/bus/api/Event;)Lnet/neoforged/bus/api/Event;"
+            )
+    )
+    private Event ecclientsettings$routeNameTagEvent(
             IEventBus eventBus,
             Event event,
             Operation<Event> original
@@ -60,31 +112,60 @@ abstract class EntityRendererMixin {
         if (!(event instanceof RenderNameTagEvent.DoRender nameTagEvent)) {
             return original.call(eventBus, event);
         }
-        ObsOverlayComponent component = componentFor(nameTagEvent.getEntityRenderState());
-        if (!ObsOverlayRuntime.allowNameTagRendering(component)
-                || !ObsOverlayRuntime.beginWorldComponent(component, nameTagEvent.getMultiBufferSource())) {
+
+        PlayerNameTagRenderPlan plan = ObsOverlayRuntime.playerNameTagRenderPlan(
+                nameTagEvent.getEntityRenderState()
+        );
+        if (plan == PlayerNameTagRenderPlan.SUPPRESS) {
             nameTagEvent.setCanceled(true);
             return nameTagEvent;
         }
-
-        ecclientsettings$nameTagScopes.push(nameTagEvent.getMultiBufferSource());
-        boolean continueRendering = false;
-        try {
-            Event posted = original.call(eventBus, event);
-            continueRendering = posted instanceof RenderNameTagEvent.DoRender postedNameTag
-                    && !postedNameTag.isCanceled();
-            return posted;
-        } finally {
-            if (!continueRendering) {
-                ecclientsettings$closeNameTagScope();
-            }
+        if (plan == PlayerNameTagRenderPlan.CAPTURE_ALIAS_AND_PRIVATE_REAL_NAME
+                || plan == PlayerNameTagRenderPlan.ALIAS_EVERYWHERE) {
+            // A DoRender listener can reconstruct the identity from PlayerRenderState.name and draw it
+            // directly. Skipping that extension point in alias mode is the only reliable fail-closed policy.
+            return nameTagEvent;
         }
+        if (plan == PlayerNameTagRenderPlan.PRIVATE_REAL_NAME
+                && nameTagEvent.getEntityRenderState() instanceof PlayerNameTagRenderState playerNameState) {
+            // Include safe changes made by render-state extensions after CanRender completed.
+            playerNameState.ecclientsettings$setPlayerNameTagState(
+                    PlayerNameTagMode.HIDE,
+                    nameTagEvent.getContent(),
+                    null
+            );
+        }
+        DeferredNameTagPass pass = ecclientsettings$eventPass(plan);
+        if (pass == null) {
+            return original.call(eventBus, event);
+        }
+
+        Event[] posted = new Event[1];
+        PassResult result = ecclientsettings$runPass(
+                pass,
+                nameTagEvent.getMultiBufferSource(),
+                () -> posted[0] = original.call(eventBus, event)
+        );
+        if (result == PassResult.COMPLETE) {
+            return posted[0];
+        }
+
+        if (pass == DeferredNameTagPass.PRIVATE_REAL_NAME) {
+            nameTagEvent.setCanceled(true);
+        }
+        // In alias mode, skipping third-party event rendering still lets vanilla draw a safe alias.
+        return result == PassResult.BEGIN_FAILED ? nameTagEvent : posted[0];
     }
 
-    @WrapMethod(
-            method = "renderNameTag(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lnet/minecraft/network/chat/Component;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
+    @WrapOperation(
+            method = "render(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/entity/EntityRenderer;renderNameTag(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lnet/minecraft/network/chat/Component;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
+            )
     )
-    private void ecclientsettings$protectDirectNameTagCall(
+    private void ecclientsettings$routeVanillaNameTag(
+            EntityRenderer<?, ?> renderer,
             EntityRenderState state,
             Component text,
             PoseStack poseStack,
@@ -92,30 +173,92 @@ abstract class EntityRendererMixin {
             int packedLight,
             Operation<Void> original
     ) {
-        if (!ecclientsettings$nameTagScopes.isEmpty()) {
-            original.call(state, text, poseStack, buffers, packedLight);
+        PlayerNameTagRenderPlan plan = ObsOverlayRuntime.playerNameTagRenderPlan(state);
+        if (plan == PlayerNameTagRenderPlan.SUPPRESS) {
             return;
         }
-        ObsOverlayComponent component = componentFor(state);
-        if (!ObsOverlayRuntime.allowNameTagRendering(component)
-                || !ObsOverlayRuntime.beginWorldComponent(component, buffers)) {
+        if (plan == PlayerNameTagRenderPlan.UNCHANGED) {
+            original.call(renderer, state, text, poseStack, buffers, packedLight);
             return;
         }
-        try {
-            original.call(state, text, poseStack, buffers, packedLight);
-        } finally {
-            ObsOverlayRuntime.endWorldComponent(buffers);
+
+        PlayerNameTagRenderState playerNameState = (PlayerNameTagRenderState) state;
+        if (plan == PlayerNameTagRenderPlan.ALIAS_EVERYWHERE) {
+            Component alias = playerNameState.ecclientsettings$getPlayerNameTagAlias();
+            if (alias != null) {
+                // Ignore the mutable render-state text in the safety fallback; only the generated alias is trusted.
+                original.call(renderer, state, alias, poseStack, buffers, packedLight);
+            }
+            return;
         }
+
+        Component originalName = playerNameState.ecclientsettings$getOriginalPlayerNameTag();
+        if (plan == PlayerNameTagRenderPlan.PRIVATE_REAL_NAME) {
+            if (originalName != null) {
+                ecclientsettings$runPass(
+                        DeferredNameTagPass.PRIVATE_REAL_NAME,
+                        buffers,
+                        () -> original.call(renderer, state, originalName, poseStack, buffers, packedLight)
+                );
+            }
+            return;
+        }
+
+        Component alias = playerNameState.ecclientsettings$getPlayerNameTagAlias();
+        if (alias == null) {
+            return;
+        }
+        PassResult publicResult = ecclientsettings$runPass(
+                DeferredNameTagPass.PUBLIC_ALIAS,
+                buffers,
+                () -> original.call(renderer, state, alias, poseStack, buffers, packedLight)
+        );
+        if (publicResult == PassResult.BEGIN_FAILED) {
+            // The alias contains no private identity and is the only safe fallback on the main target.
+            original.call(renderer, state, alias, poseStack, buffers, packedLight);
+            return;
+        }
+        if (publicResult != PassResult.COMPLETE || originalName == null) {
+            return;
+        }
+        ecclientsettings$runPass(
+                DeferredNameTagPass.PRIVATE_REAL_NAME,
+                buffers,
+                () -> original.call(renderer, state, originalName, poseStack, buffers, packedLight)
+        );
     }
 
     @Unique
-    private void ecclientsettings$closeNameTagScope() {
-        ObsOverlayRuntime.endWorldComponent(ecclientsettings$nameTagScopes.pop());
+    @Nullable
+    private static DeferredNameTagPass ecclientsettings$eventPass(PlayerNameTagRenderPlan plan) {
+        return switch (plan) {
+            case PRIVATE_REAL_NAME -> DeferredNameTagPass.PRIVATE_REAL_NAME;
+            default -> null;
+        };
     }
 
-    private static ObsOverlayComponent componentFor(EntityRenderState state) {
-        return state.isDiscrete
-                ? ObsOverlayComponent.SNEAKING_NAME_TAGS
-                : ObsOverlayComponent.NAME_TAGS;
+    @Unique
+    private static PassResult ecclientsettings$runPass(
+            DeferredNameTagPass pass,
+            MultiBufferSource buffers,
+            Runnable draw
+    ) {
+        if (!ObsOverlayRuntime.beginPlayerNamePass(pass, buffers)) {
+            return PassResult.BEGIN_FAILED;
+        }
+        boolean flushed;
+        try {
+            ObsOverlayRuntime.withDeferredNameTagPass(pass, draw);
+        } finally {
+            flushed = ObsOverlayRuntime.endWorldComponent(buffers);
+        }
+        return flushed ? PassResult.COMPLETE : PassResult.FLUSH_FAILED;
+    }
+
+    @Unique
+    private enum PassResult {
+        BEGIN_FAILED,
+        FLUSH_FAILED,
+        COMPLETE
     }
 }

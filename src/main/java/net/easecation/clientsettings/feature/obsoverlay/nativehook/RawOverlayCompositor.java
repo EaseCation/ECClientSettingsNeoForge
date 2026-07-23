@@ -21,6 +21,9 @@ import java.nio.IntBuffer;
 /** Draws privacy textures after OBS game capture and immediately before the real buffer swap. */
 public final class RawOverlayCompositor implements AutoCloseable {
 
+    private static final int MODE_OVER = 0;
+    private static final int MODE_REPLACE = 1;
+
     private static final String VERTEX_SHADER = """
             #version 150 core
             out vec2 overlayUv;
@@ -37,10 +40,15 @@ public final class RawOverlayCompositor implements AutoCloseable {
             uniform sampler2D OverlayDepthTexture;
             uniform sampler2D SceneDepthTexture;
             uniform int DepthAware;
+            uniform int CompositeMode;
             in vec2 overlayUv;
             out vec4 fragColor;
             void main() {
                 vec4 overlay = texture(OverlayTexture, overlayUv);
+                if (CompositeMode == 1) {
+                    fragColor = overlay;
+                    return;
+                }
                 if (overlay.a <= 0.0) {
                     discard;
                 }
@@ -58,6 +66,7 @@ public final class RawOverlayCompositor implements AutoCloseable {
     private int program;
     private int vertexArray;
     private int depthAwareUniform;
+    private int compositeModeUniform;
 
     public void composite(
             GpuTexture sceneDepthTexture,
@@ -68,8 +77,60 @@ public final class RawOverlayCompositor implements AutoCloseable {
             int width,
             int height
     ) {
-        if ((!worldDirty && !guiDirty) || width <= 0 || height <= 0) {
+        drawToBackBuffer(
+                null,
+                false,
+                sceneDepthTexture,
+                worldTarget,
+                worldDirty,
+                guiTarget,
+                guiDirty,
+                width,
+                height
+        );
+    }
+
+    /** Restores the clean Minecraft frame after OBS capture, then draws private overlays for the local window. */
+    public void restoreAndComposite(
+            RenderTarget mainTarget,
+            boolean restoreMainTarget,
+            GpuTexture sceneDepthTexture,
+            RenderTarget worldTarget,
+            boolean worldDirty,
+            RenderTarget guiTarget,
+            boolean guiDirty,
+            int width,
+            int height
+    ) {
+        drawToBackBuffer(
+                mainTarget,
+                restoreMainTarget,
+                sceneDepthTexture,
+                worldTarget,
+                worldDirty,
+                guiTarget,
+                guiDirty,
+                width,
+                height
+        );
+    }
+
+    private void drawToBackBuffer(
+            RenderTarget replacementTarget,
+            boolean replaceBackBuffer,
+            GpuTexture sceneDepthTexture,
+            RenderTarget worldTarget,
+            boolean worldDirty,
+            RenderTarget guiTarget,
+            boolean guiDirty,
+            int width,
+            int height
+    ) {
+        if ((!replaceBackBuffer && !worldDirty && !guiDirty) || width <= 0 || height <= 0) {
             return;
+        }
+        if (replaceBackBuffer && replacementTarget == null) {
+            throw new IllegalArgumentException("A replacement target is required to restore the back buffer");
         }
         ensureInitialized();
 
@@ -126,24 +187,32 @@ public final class RawOverlayCompositor implements AutoCloseable {
                 GL11.glDisable(GL11.GL_COLOR_LOGIC_OP);
                 GL11.glDepthMask(false);
                 GL30.glColorMaski(0, true, true, true, true);
-                GL30.glEnablei(GL11.GL_BLEND, 0);
-                // GUI and immediate world passes accumulate premultiplied color into transparent targets.
-                setBlendFunction(
-                        indexedBlend,
-                        GL11.GL_ONE,
-                        GL11.GL_ONE_MINUS_SRC_ALPHA,
-                        GL11.GL_ONE,
-                        GL11.GL_ONE_MINUS_SRC_ALPHA
-                );
-                setBlendEquation(indexedBlend, GL14.GL_FUNC_ADD, GL14.GL_FUNC_ADD);
                 GL20.glUseProgram(program);
                 GL30.glBindVertexArray(vertexArray);
 
+                if (replaceBackBuffer) {
+                    // The clean main target must replace every back-buffer pixel, including alpha-zero pixels.
+                    GL30.glDisablei(GL11.GL_BLEND, 0);
+                    draw(replacementTarget, null, false, MODE_REPLACE);
+                }
+
+                if (worldDirty || guiDirty) {
+                    GL30.glEnablei(GL11.GL_BLEND, 0);
+                    // GUI and immediate world passes accumulate premultiplied color into transparent targets.
+                    setBlendFunction(
+                            indexedBlend,
+                            GL11.GL_ONE,
+                            GL11.GL_ONE_MINUS_SRC_ALPHA,
+                            GL11.GL_ONE,
+                            GL11.GL_ONE_MINUS_SRC_ALPHA
+                    );
+                    setBlendEquation(indexedBlend, GL14.GL_FUNC_ADD, GL14.GL_FUNC_ADD);
+                }
                 if (worldDirty) {
-                    draw(worldTarget, sceneDepthTexture, true);
+                    draw(worldTarget, sceneDepthTexture, true, MODE_OVER);
                 }
                 if (guiDirty) {
-                    draw(guiTarget, sceneDepthTexture, false);
+                    draw(guiTarget, sceneDepthTexture, false, MODE_OVER);
                 }
             } finally {
                 for (int unit = 0; unit < previousTextures.length; unit++) {
@@ -187,7 +256,7 @@ public final class RawOverlayCompositor implements AutoCloseable {
         }
     }
 
-    private void draw(RenderTarget target, GpuTexture sceneDepthTexture, boolean depthAware) {
+    private void draw(RenderTarget target, GpuTexture sceneDepthTexture, boolean depthAware, int compositeMode) {
         GL13.glActiveTexture(GL13.GL_TEXTURE0);
         GL33.glBindSampler(0, 0);
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId(target.getColorTexture()));
@@ -203,6 +272,7 @@ public final class RawOverlayCompositor implements AutoCloseable {
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId(sceneDepthTexture));
         }
         GL20.glUniform1i(depthAwareUniform, useDepth ? 1 : 0);
+        GL20.glUniform1i(compositeModeUniform, compositeMode);
         GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 3);
     }
 
@@ -239,6 +309,7 @@ public final class RawOverlayCompositor implements AutoCloseable {
         GL20.glUniform1i(GL20.glGetUniformLocation(program, "OverlayDepthTexture"), 1);
         GL20.glUniform1i(GL20.glGetUniformLocation(program, "SceneDepthTexture"), 2);
         depthAwareUniform = GL20.glGetUniformLocation(program, "DepthAware");
+        compositeModeUniform = GL20.glGetUniformLocation(program, "CompositeMode");
         GL20.glUseProgram(previousProgram);
         vertexArray = GL30.glGenVertexArrays();
     }
@@ -317,6 +388,7 @@ public final class RawOverlayCompositor implements AutoCloseable {
             GL20.glDeleteProgram(program);
             program = 0;
             depthAwareUniform = 0;
+            compositeModeUniform = 0;
         }
     }
 }

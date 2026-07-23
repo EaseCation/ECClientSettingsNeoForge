@@ -6,6 +6,7 @@ import net.easecation.clientsettings.ECClientSettings;
 import net.easecation.clientsettings.config.ObsOverlayConfig;
 import net.easecation.clientsettings.feature.obsoverlay.nativehook.ObsOverlayHook;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.render.GuiRenderer;
 import net.minecraft.client.gui.render.state.GuiElementRenderState;
 import net.minecraft.client.gui.render.state.GuiItemRenderState;
@@ -20,15 +21,20 @@ import net.minecraft.client.gui.screens.inventory.CommandBlockEditScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.network.chat.Component;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.entity.SignText;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppingEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.gui.PictureInPictureRendererRegistration;
+import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFWNativeWin32;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -36,6 +42,9 @@ public final class ObsOverlayRuntime {
 
     private static final ArrayDeque<CaptureFrame> CAPTURE_STACK = new ArrayDeque<>();
     private static final ArrayDeque<MultiBufferSource> FAILED_WORLD_FLUSHES = new ArrayDeque<>();
+    private static final List<DeferredNameTagDraw> DEFERRED_PUBLIC_PLAYER_NAMES = new ArrayList<>();
+    private static final List<DeferredNameTagDraw> DEFERRED_PRIVATE_PLAYER_NAMES = new ArrayList<>();
+    private static final ThreadLocal<DeferredNameTagPass> DEFERRED_NAME_TAG_PASS = new ThreadLocal<>();
     private static volatile ObsOverlayRenderer renderer;
     private static volatile ObsOverlayHook hook;
     private static volatile ObsOverlayHookStatus status = ObsOverlayHookStatus.NOT_INITIALIZED;
@@ -63,7 +72,11 @@ public final class ObsOverlayRuntime {
             }
             renderer = new ObsOverlayRenderer(minecraft, registrations);
             long windowHandle = GLFWNativeWin32.glfwGetWin32Window(minecraft.getWindow().getWindow());
-            hook = ObsOverlayHook.install(windowHandle, renderer::composite, ObsOverlayRuntime::onCompositorFailure);
+            hook = ObsOverlayHook.install(
+                    windowHandle,
+                    ObsOverlayRuntime::compositeAfterCapture,
+                    ObsOverlayRuntime::onCompositorFailure
+            );
             status = hook.unsafeCaptureOrder()
                     ? ObsOverlayHookStatus.UNSAFE_CAPTURE_ORDER
                     : ObsOverlayHookStatus.READY;
@@ -97,6 +110,11 @@ public final class ObsOverlayRuntime {
             ECClientSettings.LOGGER.warn("Clearing {} unclosed OBS GUI capture frame(s)", CAPTURE_STACK.size());
             CAPTURE_STACK.clear();
         }
+        if (!DEFERRED_PUBLIC_PLAYER_NAMES.isEmpty() || !DEFERRED_PRIVATE_PLAYER_NAMES.isEmpty()) {
+            ECClientSettings.LOGGER.warn("Discarding deferred OBS player name draws left over from the previous frame");
+            DEFERRED_PUBLIC_PLAYER_NAMES.clear();
+            DEFERRED_PRIVATE_PLAYER_NAMES.clear();
+        }
         ObsOverlayRenderer current = renderer;
         if (current != null) {
             if (!retryFailedWorldFlushes()) {
@@ -112,7 +130,7 @@ public final class ObsOverlayRuntime {
         }
         ObsOverlaySettings settings = ObsOverlayConfig.current();
         CaptureMode mode = componentMode(component, settings);
-        CAPTURE_STACK.push(new CaptureFrame(mode, false));
+        CAPTURE_STACK.push(new CaptureFrame(mode, false, false));
     }
 
     public static void endComponent() {
@@ -126,71 +144,151 @@ public final class ObsOverlayRuntime {
         ObsOverlaySettings settings = ObsOverlayConfig.current();
         CaptureMode mode = componentMode(component, settings);
         if (mode == CaptureMode.INHERIT) {
-            CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false));
+            CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false, false));
             return true;
         }
         IrisCompatibility.WorldRedirectDecision irisDecision = IrisCompatibility.worldRedirectDecision();
         if (irisDecision != IrisCompatibility.WorldRedirectDecision.ALLOW) {
             if (!settings.failClosed()) {
-                CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false));
+                CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false, false));
                 return true;
             }
             return false;
         }
-
-        ObsOverlayRenderer current = renderer;
-        if (current == null) {
-            if (settings.failClosed()) {
-                return false;
-            }
-            CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false));
-            return true;
-        }
-        ObsOverlayRenderer.WorldGraphicsState graphicsState = current.captureWorldGraphicsState();
-        if (!OverlayBufferFlusher.flush(buffers)) {
-            current.restoreWorldGraphicsState(graphicsState);
-            onWorldFlushFailure(false);
-            if (settings.failClosed()) {
-                return false;
-            }
-            CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false));
-            return true;
-        }
-        try {
-            current.beginWorld(mode == CaptureMode.OVERLAY, graphicsState);
-        } catch (RuntimeException | Error throwable) {
-            current.restoreWorldGraphicsState(graphicsState);
-            throw throwable;
-        }
-        CAPTURE_STACK.push(new CaptureFrame(mode, true));
-        return true;
+        return beginWorldRedirect(mode, buffers, settings, true, false);
     }
 
-    public static boolean beginDeferredNameTags(MultiBufferSource buffers) {
-        ObsOverlaySettings settings = ObsOverlayConfig.current();
-        ObsOverlayComponent component = settings.protects(ObsOverlayComponent.NAME_TAGS)
-                ? ObsOverlayComponent.NAME_TAGS
-                : ObsOverlayComponent.SNEAKING_NAME_TAGS;
-        return beginWorldComponent(component, buffers);
+    public static boolean beginPlayerNamePass(DeferredNameTagPass pass, MultiBufferSource buffers) {
+        if (!strictPlayerNameRedirectAvailable()) {
+            return false;
+        }
+        CaptureMode mode = pass == DeferredNameTagPass.PUBLIC_ALIAS
+                ? CaptureMode.PUBLIC_ALIAS
+                : CaptureMode.OVERLAY;
+        return beginWorldRedirect(
+                mode,
+                buffers,
+                ObsOverlayConfig.current(),
+                false,
+                pass == DeferredNameTagPass.PRIVATE_REAL_NAME
+        );
     }
 
     public static void markViaBedrockDeferredNameTagHookApplied() {
         ViaBedrockCompatibility.markDeferredNameTagHookApplied();
     }
 
-    public static boolean allowNameTagRendering(ObsOverlayComponent component) {
-        if (ViaBedrockCompatibility.deferredNameTagHookAvailable()) {
-            return true;
+    public static PlayerNameTagRenderPlan playerNameTagRenderPlan(EntityRenderState state) {
+        if (!(state instanceof PlayerNameTagRenderState playerNameState)) {
+            return PlayerNameTagRenderPlan.UNCHANGED;
         }
+        PlayerNameTagMode mode = playerNameState.ecclientsettings$getPlayerNameTagMode();
+        if (mode == null || mode == PlayerNameTagMode.UNCHANGED) {
+            return PlayerNameTagRenderPlan.UNCHANGED;
+        }
+
         ObsOverlaySettings settings = ObsOverlayConfig.current();
-        if (!settings.protects(component)) {
-            return true;
+        Minecraft minecraft = Minecraft.getInstance();
+        if (settings.playerNameTagsAutoHide()
+                && minecraft.screen != null
+                && !(minecraft.screen instanceof ChatScreen)) {
+            return PlayerNameTagRenderPlan.SUPPRESS;
         }
-        markProtectionFailed(
-                "ViaBedrockUtility deferred name-tag protection did not apply",
-                new IllegalStateException("ViaBedrockUtility deferred name-tag hook unavailable")
+        if (mode == PlayerNameTagMode.PSEUDONYMIZE
+                && playerNameState.ecclientsettings$getPlayerNameTagAlias() == null) {
+            return PlayerNameTagRenderPlan.SUPPRESS;
+        }
+        if (!ViaBedrockCompatibility.deferredNameTagHookAvailable()) {
+            markProtectionFailed(
+                    "ViaBedrockUtility deferred player-name hook did not apply",
+                    new IllegalStateException("ViaBedrockUtility deferred player-name hook unavailable")
+            );
+            return mode == PlayerNameTagMode.PSEUDONYMIZE
+                    ? PlayerNameTagRenderPlan.ALIAS_EVERYWHERE
+                    : settings.failClosed()
+                            ? PlayerNameTagRenderPlan.SUPPRESS
+                            : PlayerNameTagRenderPlan.UNCHANGED;
+        }
+        if (!strictPlayerNameRedirectAvailable()) {
+            return mode == PlayerNameTagMode.PSEUDONYMIZE
+                    ? PlayerNameTagRenderPlan.ALIAS_EVERYWHERE
+                    : settings.failClosed()
+                            ? PlayerNameTagRenderPlan.SUPPRESS
+                            : PlayerNameTagRenderPlan.UNCHANGED;
+        }
+        return mode == PlayerNameTagMode.PSEUDONYMIZE
+                ? PlayerNameTagRenderPlan.CAPTURE_ALIAS_AND_PRIVATE_REAL_NAME
+                : PlayerNameTagRenderPlan.PRIVATE_REAL_NAME;
+    }
+
+    public static void withDeferredNameTagPass(DeferredNameTagPass pass, Runnable draw) {
+        DeferredNameTagPass previous = DEFERRED_NAME_TAG_PASS.get();
+        DEFERRED_NAME_TAG_PASS.set(pass);
+        try {
+            draw.run();
+        } finally {
+            if (previous == null) {
+                DEFERRED_NAME_TAG_PASS.remove();
+            } else {
+                DEFERRED_NAME_TAG_PASS.set(previous);
+            }
+        }
+    }
+
+    public static boolean captureDeferredNameTag(
+            Font font,
+            Component text,
+            float x,
+            float y,
+            int color,
+            Matrix4f pose,
+            Font.DisplayMode displayMode,
+            int backgroundColor,
+            int packedLight
+    ) {
+        DeferredNameTagPass pass = DEFERRED_NAME_TAG_PASS.get();
+        if (pass == null) {
+            return false;
+        }
+        DeferredNameTagDraw draw = new DeferredNameTagDraw(
+                font,
+                text,
+                x,
+                y,
+                color,
+                new Matrix4f(pose),
+                displayMode,
+                backgroundColor,
+                packedLight
         );
-        return !settings.failClosed();
+        if (pass == DeferredNameTagPass.PUBLIC_ALIAS) {
+            DEFERRED_PUBLIC_PLAYER_NAMES.add(draw);
+        } else {
+            DEFERRED_PRIVATE_PLAYER_NAMES.add(draw);
+        }
+        return true;
+    }
+
+    public static void replayDeferredPlayerNameTags(MultiBufferSource.BufferSource buffers) {
+        List<DeferredNameTagDraw> publicDraws = List.copyOf(DEFERRED_PUBLIC_PLAYER_NAMES);
+        List<DeferredNameTagDraw> privateDraws = List.copyOf(DEFERRED_PRIVATE_PLAYER_NAMES);
+        DEFERRED_PUBLIC_PLAYER_NAMES.clear();
+        DEFERRED_PRIVATE_PLAYER_NAMES.clear();
+
+        if (!publicDraws.isEmpty()) {
+            if (beginPlayerNamePass(DeferredNameTagPass.PUBLIC_ALIAS, buffers)) {
+                if (!drawAndEndPlayerNamePass(publicDraws, buffers)) {
+                    return;
+                }
+            } else if (CAPTURE_STACK.isEmpty()) {
+                // Aliases contain no private identity and remain safe when the dual-target path is unavailable.
+                drawDeferredNameTags(publicDraws, buffers);
+                OverlayBufferFlusher.flush(buffers);
+            }
+        }
+        if (!privateDraws.isEmpty() && beginPlayerNamePass(DeferredNameTagPass.PRIVATE_REAL_NAME, buffers)) {
+            drawAndEndPlayerNamePass(privateDraws, buffers);
+        }
     }
 
     public static boolean suspendImmediatelyFastSignTextCache(SignText text) {
@@ -202,20 +300,21 @@ public final class ObsOverlayRuntime {
         ImmediatelyFastCompatibility.restoreSignTextCache(text, restore);
     }
 
-    public static void endWorldComponent(MultiBufferSource buffers) {
+    public static boolean endWorldComponent(MultiBufferSource buffers) {
         CaptureFrame frame = CAPTURE_STACK.peek();
         if (frame != null && frame.worldRedirect()) {
             boolean flushed = OverlayBufferFlusher.flush(buffers);
-            if (!flushed && ObsOverlayConfig.current().failClosed()) {
+            if (!flushed && (frame.forceFailClosed() || ObsOverlayConfig.current().failClosed())) {
                 // Keep the protected target bound until beginFrame restores it; delayed vertices cannot leak
                 // into the main target in the remainder of this frame.
                 CAPTURE_STACK.pop();
                 FAILED_WORLD_FLUSHES.addLast(buffers);
                 onWorldFlushFailure(true);
-                return;
+                return false;
             }
         }
         endCapture();
+        return true;
     }
 
     public static void beginScreen(Screen screen) {
@@ -225,7 +324,7 @@ public final class ObsOverlayRuntime {
         CaptureMode mode = settings.enabled() && (protectChatInput || isProtectedScreen(screen, settings))
                 ? protectedMode(settings)
                 : CaptureMode.INHERIT;
-        CAPTURE_STACK.push(new CaptureFrame(mode, false));
+        CAPTURE_STACK.push(new CaptureFrame(mode, false, false));
     }
 
     public static void endScreen() {
@@ -234,7 +333,11 @@ public final class ObsOverlayRuntime {
 
     public static void beginTestMarker() {
         ObsOverlaySettings settings = ObsOverlayConfig.current();
-        CAPTURE_STACK.push(new CaptureFrame(settings.enabled() ? protectedMode(settings) : CaptureMode.INHERIT, false));
+        CAPTURE_STACK.push(new CaptureFrame(
+                settings.enabled() ? protectedMode(settings) : CaptureMode.INHERIT,
+                false,
+                false
+        ));
     }
 
     public static void endTestMarker() {
@@ -300,6 +403,52 @@ public final class ObsOverlayRuntime {
         }
     }
 
+    public static boolean preparePublicFrameForCapture() {
+        ObsOverlaySettings settings = ObsOverlayConfig.current();
+        if (!settings.enabled()) {
+            return true;
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.getWindow().isMinimized()) {
+            return false;
+        }
+        ObsOverlayRenderer current = renderer;
+        if (current != null && protectionReady()) {
+            try {
+                return current.preparePublicFrame();
+            } catch (RuntimeException | LinkageError exception) {
+                onCompositorFailure(exception);
+            }
+        }
+        if (!settings.failClosed()
+                && settings.effectivePlayerNameTagMode() != PlayerNameTagMode.PSEUDONYMIZE) {
+            return true;
+        }
+        try {
+            // Vanilla's full-screen blit is the last-resort scrubber when the raw compositor is unsafe.
+            // The main target contains neither redirected private overlays nor a real name in alias mode.
+            minecraft.getMainRenderTarget().blitToScreen();
+            return true;
+        } catch (RuntimeException | LinkageError exception) {
+            markProtectionFailed("Could not prepare a fail-closed OBS capture frame", exception);
+            return false;
+        }
+    }
+
+    private static void compositeAfterCapture() {
+        ObsOverlayRenderer current = renderer;
+        if (current == null) {
+            return;
+        }
+        boolean allowPrivateOverlays = ObsOverlayConfig.current().enabled() && protectionReady();
+        if (!current.composite(allowPrivateOverlays) && allowPrivateOverlays) {
+            markProtectionFailed(
+                    "OBS capture reached the buffer swap without a prepared public frame",
+                    new IllegalStateException("Public OBS frame was not prepared")
+            );
+        }
+    }
+
     public static void backupSceneDepth() {
         ObsOverlayRenderer current = renderer;
         if (current != null) {
@@ -360,6 +509,10 @@ public final class ObsOverlayRuntime {
         }
         CAPTURE_STACK.clear();
         FAILED_WORLD_FLUSHES.clear();
+        DEFERRED_PUBLIC_PLAYER_NAMES.clear();
+        DEFERRED_PRIVATE_PLAYER_NAMES.clear();
+        DEFERRED_NAME_TAG_PASS.remove();
+        PlayerAliasService.reset();
         mainGuiState = null;
         pictureInPictureRenderers = null;
         status = ObsOverlayHookStatus.STOPPED;
@@ -367,6 +520,93 @@ public final class ObsOverlayRuntime {
 
     public static void onClientStopping(ClientStoppingEvent event) {
         stop();
+    }
+
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        PlayerAliasService.reset();
+        DEFERRED_PUBLIC_PLAYER_NAMES.clear();
+        DEFERRED_PRIVATE_PLAYER_NAMES.clear();
+    }
+
+    private static boolean strictPlayerNameRedirectAvailable() {
+        return protectionReady()
+                && IrisCompatibility.worldRedirectDecision() == IrisCompatibility.WorldRedirectDecision.ALLOW;
+    }
+
+    private static boolean beginWorldRedirect(
+            CaptureMode mode,
+            MultiBufferSource buffers,
+            ObsOverlaySettings settings,
+            boolean allowFailOpen,
+            boolean forceFailClosed
+    ) {
+        ObsOverlayRenderer current = renderer;
+        if (current == null) {
+            if (allowFailOpen && !settings.failClosed()) {
+                CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false, false));
+                return true;
+            }
+            return false;
+        }
+        ObsOverlayRenderer.WorldGraphicsState graphicsState = current.captureWorldGraphicsState();
+        if (!OverlayBufferFlusher.flush(buffers)) {
+            current.restoreWorldGraphicsState(graphicsState);
+            onWorldFlushFailure(false);
+            if (allowFailOpen && !settings.failClosed()) {
+                CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false, false));
+                return true;
+            }
+            return false;
+        }
+        ObsOverlayRenderer.WorldDestination destination = switch (mode) {
+            case OVERLAY -> ObsOverlayRenderer.WorldDestination.PRIVATE_OVERLAY;
+            case PUBLIC_ALIAS -> ObsOverlayRenderer.WorldDestination.PUBLIC_ALIAS;
+            case DISCARD -> ObsOverlayRenderer.WorldDestination.DISCARD;
+            case INHERIT -> throw new IllegalArgumentException("Cannot redirect an inherited OBS world scope");
+        };
+        try {
+            current.beginWorld(destination, graphicsState);
+        } catch (RuntimeException | Error throwable) {
+            current.restoreWorldGraphicsState(graphicsState);
+            throw throwable;
+        }
+        CAPTURE_STACK.push(new CaptureFrame(mode, true, forceFailClosed));
+        return true;
+    }
+
+    private static void drawDeferredNameTags(
+            List<DeferredNameTagDraw> draws,
+            MultiBufferSource.BufferSource buffers
+    ) {
+        for (DeferredNameTagDraw draw : draws) {
+            draw.font().drawInBatch(
+                    draw.text(),
+                    draw.x(),
+                    draw.y(),
+                    draw.color(),
+                    false,
+                    draw.pose(),
+                    buffers,
+                    draw.displayMode(),
+                    draw.backgroundColor(),
+                    draw.packedLight()
+            );
+        }
+    }
+
+    private static boolean drawAndEndPlayerNamePass(
+            List<DeferredNameTagDraw> draws,
+            MultiBufferSource.BufferSource buffers
+    ) {
+        boolean flushed;
+        try {
+            drawDeferredNameTags(draws, buffers);
+        } finally {
+            // A draw exception may still leave identity-bearing vertices in the shared source.
+            // Ending in finally either flushes them into the private target or keeps that target bound.
+            flushed = endWorldComponent(buffers);
+        }
+        return flushed;
     }
 
     private static CaptureMode componentMode(ObsOverlayComponent component, ObsOverlaySettings settings) {
@@ -484,9 +724,23 @@ public final class ObsOverlayRuntime {
     private enum CaptureMode {
         INHERIT,
         OVERLAY,
+        PUBLIC_ALIAS,
         DISCARD
     }
 
-    private record CaptureFrame(CaptureMode mode, boolean worldRedirect) {
+    private record DeferredNameTagDraw(
+            Font font,
+            Component text,
+            float x,
+            float y,
+            int color,
+            Matrix4f pose,
+            Font.DisplayMode displayMode,
+            int backgroundColor,
+            int packedLight
+    ) {
+    }
+
+    private record CaptureFrame(CaptureMode mode, boolean worldRedirect, boolean forceFailClosed) {
     }
 }

@@ -4,6 +4,9 @@ import net.easecation.clientsettings.config.ObsOverlayConfig;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayComponent;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayScreen;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlaySettings;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerAliasColorMode;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerAliasFormat;
+import net.easecation.clientsettings.feature.obsoverlay.PlayerNameTagMode;
 
 import java.util.EnumMap;
 import java.util.List;
@@ -13,6 +16,10 @@ final class ObsOverlaySettingsDraft {
     private boolean enabled;
     private boolean showTestMarker;
     private boolean failClosed;
+    private PlayerNameTagMode playerNameTagMode;
+    private PlayerAliasFormat playerAliasFormat;
+    private PlayerAliasColorMode playerAliasColorMode;
+    private boolean playerNameTagsAutoHide;
     private final EnumMap<ObsOverlayComponent, Boolean> components;
     private final EnumMap<ObsOverlayComponent, Boolean> autoHide;
     private boolean hideAllInGameScreens;
@@ -24,6 +31,10 @@ final class ObsOverlaySettingsDraft {
         enabled = settings.enabled();
         showTestMarker = settings.showTestMarker();
         failClosed = settings.failClosed();
+        playerNameTagMode = settings.playerNameTagMode();
+        playerAliasFormat = settings.playerAliasFormat();
+        playerAliasColorMode = settings.playerAliasColorMode();
+        playerNameTagsAutoHide = settings.playerNameTagsAutoHide();
         components = new EnumMap<>(settings.components());
         autoHide = new EnumMap<>(settings.autoHide());
         hideAllInGameScreens = settings.hideAllInGameScreens();
@@ -60,11 +71,46 @@ final class ObsOverlaySettingsDraft {
         this.failClosed = failClosed;
     }
 
+    PlayerNameTagMode playerNameTagMode() {
+        return playerNameTagMode;
+    }
+
+    void setPlayerNameTagMode(PlayerNameTagMode mode) {
+        playerNameTagMode = mode;
+    }
+
+    PlayerAliasFormat playerAliasFormat() {
+        return playerAliasFormat;
+    }
+
+    void setPlayerAliasFormat(PlayerAliasFormat format) {
+        playerAliasFormat = format;
+    }
+
+    PlayerAliasColorMode playerAliasColorMode() {
+        return playerAliasColorMode;
+    }
+
+    void setPlayerAliasColorMode(PlayerAliasColorMode colorMode) {
+        playerAliasColorMode = colorMode;
+    }
+
+    boolean playerNameTagsAutoHide() {
+        return playerNameTagsAutoHide;
+    }
+
+    void setPlayerNameTagsAutoHide(boolean autoHide) {
+        playerNameTagsAutoHide = autoHide;
+    }
+
     boolean component(ObsOverlayComponent component) {
         return components.get(component);
     }
 
     void setComponent(ObsOverlayComponent component, boolean enabled) {
+        if (component.internal()) {
+            throw new IllegalArgumentException("Internal OBS components use dedicated settings: " + component);
+        }
         components.put(component, enabled);
     }
 
@@ -73,6 +119,9 @@ final class ObsOverlaySettingsDraft {
     }
 
     void setAutoHide(ObsOverlayComponent component, boolean enabled) {
+        if (component.internal()) {
+            throw new IllegalArgumentException("Internal OBS components use dedicated settings: " + component);
+        }
         autoHide.put(component, enabled);
     }
 
@@ -113,6 +162,10 @@ final class ObsOverlaySettingsDraft {
                 enabled,
                 showTestMarker,
                 failClosed,
+                playerNameTagMode,
+                playerAliasFormat,
+                playerAliasColorMode,
+                playerNameTagsAutoHide,
                 components,
                 autoHide,
                 hideAllInGameScreens,

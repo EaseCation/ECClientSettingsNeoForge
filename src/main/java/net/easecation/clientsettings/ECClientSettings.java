@@ -56,6 +56,7 @@ public final class ECClientSettings {
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, ClientSettingsEvents::onScreenInit);
         NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onModEvent);
         NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onDisconnected);
+        NeoForge.EVENT_BUS.addListener(ObsOverlayRuntime::onLoggingOut);
         NeoForge.EVENT_BUS.addListener(ObsOverlayRuntime::onClientStopping);
 
         LOGGER.info("EaseCation client settings initialized");

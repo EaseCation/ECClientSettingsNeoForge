@@ -5,11 +5,16 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 public record ObsOverlaySettings(
         boolean enabled,
         boolean showTestMarker,
         boolean failClosed,
+        PlayerNameTagMode playerNameTagMode,
+        PlayerAliasFormat playerAliasFormat,
+        PlayerAliasColorMode playerAliasColorMode,
+        boolean playerNameTagsAutoHide,
         Map<ObsOverlayComponent, Boolean> components,
         Map<ObsOverlayComponent, Boolean> autoHide,
         boolean hideAllInGameScreens,
@@ -21,6 +26,9 @@ public record ObsOverlaySettings(
     public static final ObsOverlaySettings DEFAULT = defaults();
 
     public ObsOverlaySettings {
+        playerNameTagMode = Objects.requireNonNullElse(playerNameTagMode, PlayerNameTagMode.UNCHANGED);
+        playerAliasFormat = Objects.requireNonNullElse(playerAliasFormat, PlayerAliasFormat.FRIENDLY);
+        playerAliasColorMode = Objects.requireNonNullElse(playerAliasColorMode, PlayerAliasColorMode.DISTINCT);
         components = immutableComponentMap(components, false);
         autoHide = immutableComponentMap(autoHide, true);
         screens = immutableScreenMap(screens);
@@ -32,11 +40,21 @@ public record ObsOverlaySettings(
     }
 
     public boolean protects(ObsOverlayComponent component) {
+        if (component == ObsOverlayComponent.PLAYER_NAME_TAGS) {
+            return effectivePlayerNameTagMode() != PlayerNameTagMode.UNCHANGED;
+        }
         return enabled && components.get(component);
     }
 
     public boolean autoHides(ObsOverlayComponent component) {
+        if (component == ObsOverlayComponent.PLAYER_NAME_TAGS) {
+            return playerNameTagsAutoHide;
+        }
         return component.autoHideSupported() && autoHide.get(component);
+    }
+
+    public PlayerNameTagMode effectivePlayerNameTagMode() {
+        return enabled ? playerNameTagMode : PlayerNameTagMode.UNCHANGED;
     }
 
     public boolean protects(ObsOverlayScreen screen) {
@@ -54,7 +72,21 @@ public record ObsOverlaySettings(
         for (ObsOverlayScreen screen : ObsOverlayScreen.values()) {
             screens.put(screen, false);
         }
-        return new ObsOverlaySettings(false, true, true, components, autoHide, false, screens, false, List.of());
+        return new ObsOverlaySettings(
+                false,
+                true,
+                true,
+                PlayerNameTagMode.UNCHANGED,
+                PlayerAliasFormat.FRIENDLY,
+                PlayerAliasColorMode.DISTINCT,
+                true,
+                components,
+                autoHide,
+                false,
+                screens,
+                false,
+                List.of()
+        );
     }
 
     private static Map<ObsOverlayComponent, Boolean> immutableComponentMap(
@@ -63,7 +95,7 @@ public record ObsOverlaySettings(
     ) {
         EnumMap<ObsOverlayComponent, Boolean> copy = new EnumMap<>(ObsOverlayComponent.class);
         for (ObsOverlayComponent component : ObsOverlayComponent.values()) {
-            copy.put(component, source.getOrDefault(component, missingValue));
+            copy.put(component, component.internal() ? false : source.getOrDefault(component, missingValue));
         }
         return Collections.unmodifiableMap(copy);
     }
