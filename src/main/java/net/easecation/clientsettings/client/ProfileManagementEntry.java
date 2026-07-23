@@ -1,9 +1,11 @@
 package net.easecation.clientsettings.client;
 
+import me.shedaniel.clothconfig2.gui.AbstractConfigScreen;
 import me.shedaniel.clothconfig2.gui.entries.TextListEntry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -51,10 +53,28 @@ final class ProfileManagementEntry extends TextListEntry {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0 && hasRenderedBounds
                 && contains(mouseX, mouseY, entryX, entryY, entryWidth, entryHeight)) {
-            Minecraft.getInstance().setScreen(new ProfileManagementScreen(settingsParent));
+            openProfileManagement();
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private void openProfileManagement() {
+        Minecraft minecraft = Minecraft.getInstance();
+        Screen current = minecraft.screen;
+        if (current instanceof AbstractConfigScreen configScreen && configScreen.isEdited()) {
+            minecraft.setScreen(new ConfirmScreen(
+                    returnToSettings -> minecraft.setScreen(returnToSettings
+                            ? current
+                            : new ProfileManagementScreen(settingsParent)),
+                    Component.translatable("screen.ecclientsettings.unsaved_changes.title"),
+                    Component.translatable("screen.ecclientsettings.unsaved_changes.profile_management"),
+                    Component.translatable("screen.ecclientsettings.unsaved_changes.return"),
+                    Component.translatable("screen.ecclientsettings.unsaved_changes.discard")
+            ));
+            return;
+        }
+        minecraft.setScreen(new ProfileManagementScreen(settingsParent));
     }
 
     static boolean contains(double mouseX, double mouseY, int x, int y, int width, int height) {

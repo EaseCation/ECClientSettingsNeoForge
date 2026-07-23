@@ -5,12 +5,16 @@ modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
 authors="EaseCation"
+credits="OBS Overlay integration based on zziger / Artem Dzhemesiuk (https://github.com/zziger/obs-overlay), MIT License"
 description='''
 Unified EaseCation client settings with pause-menu and keyboard access.
 '''
 
 [[mixins]]
 config="ecclientsettings.mixins.json"
+
+[[mixins]]
+config="ecclientsettings.obs-overlay.mixins.json"
 
 [[dependencies.${mod_id}]]
 modId="neoforge"

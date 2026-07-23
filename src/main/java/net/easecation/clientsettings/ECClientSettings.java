@@ -4,10 +4,13 @@ import net.easecation.clientsettings.client.ClientSettingsEvents;
 import net.easecation.clientsettings.client.ClientSettingsKeyMappings;
 import net.easecation.clientsettings.client.input.ClientInputDispatcher;
 import net.easecation.clientsettings.config.ClientSettingsConfig;
+import net.easecation.clientsettings.config.ObsOverlayConfig;
 import net.easecation.clientsettings.feature.blockoutline.BlockOutlineRenderer;
 import net.easecation.clientsettings.feature.hud.HudRenderer;
 import net.easecation.clientsettings.feature.hud.keystrokes.KeystrokesInputTracker;
 import net.easecation.clientsettings.feature.hitcolor.HitColorRuntime;
+import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayGuiLayer;
+import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayRuntime;
 import net.easecation.clientsettings.feature.timechanger.TimeChangerRuntime;
 import net.easecation.clientsettings.feature.zoom.ZoomEvents;
 import net.easecation.clientsettings.window.WindowAppearanceEvents;
@@ -29,8 +32,10 @@ public final class ECClientSettings {
 
     public ECClientSettings(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.CLIENT, ClientSettingsConfig.SPEC);
+        modContainer.registerConfig(ModConfig.Type.CLIENT, ObsOverlayConfig.SPEC, ObsOverlayConfig.FILE_NAME);
         modEventBus.addListener(ClientSettingsKeyMappings::register);
         modEventBus.addListener(HudRenderer::register);
+        modEventBus.addListener(ObsOverlayGuiLayer::register);
 
         NeoForge.EVENT_BUS.addListener(ClientInputDispatcher::onClientTick);
         NeoForge.EVENT_BUS.addListener(TimeChangerRuntime::onClientTick);
@@ -51,6 +56,7 @@ public final class ECClientSettings {
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, ClientSettingsEvents::onScreenInit);
         NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onModEvent);
         NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onDisconnected);
+        NeoForge.EVENT_BUS.addListener(ObsOverlayRuntime::onClientStopping);
 
         LOGGER.info("EaseCation client settings initialized");
     }

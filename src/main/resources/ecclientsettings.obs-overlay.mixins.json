@@ -1,0 +1,26 @@
+{
+  "required": true,
+  "package": "net.easecation.clientsettings.mixin.obsoverlay",
+  "plugin": "net.easecation.clientsettings.mixin.obsoverlay.ObsOverlayMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "AbstractSignRendererMixin",
+    "BannerRendererMixin",
+    "BeaconRendererMixin",
+    "ChatComponentMixin",
+    "ChatScreenMixin",
+    "ChestRendererMixin",
+    "EntityRendererMixin",
+    "GameRendererMixin",
+    "GuiLayerManagerMixin",
+    "GuiRendererMixin",
+    "GuiRenderStateMixin",
+    "MapRendererMixin",
+    "MinecraftMixin",
+    "ScreenMixin",
+    "ViaBedrockDeferredNameTagMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

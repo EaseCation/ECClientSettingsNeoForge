@@ -7,6 +7,8 @@ import net.easecation.clientsettings.profile.model.HudWidgetId;
 import net.easecation.clientsettings.profile.model.HudWidgetSettings;
 import net.easecation.clientsettings.profile.model.HudWidgetStyle;
 import net.easecation.clientsettings.profile.runtime.ProfileServices;
+import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayComponent;
+import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayRuntime;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -125,19 +127,24 @@ public final class HudRenderer {
             return;
         }
 
-        HudSettings settings = ProfileServices.active().features().hud();
-        HudRenderContext context = new HudRenderContext(
-                minecraft,
-                graphics,
-                HudRenderMode.LIVE,
-                deltaTracker.getGameTimeDeltaPartialTick(false),
-                settings
-        );
-        for (HudWidget widget : HudWidgetRegistry.widgets()) {
-            HudWidgetSettings widgetSettings = settings.widget(widget.id());
-            if (widgetSettings.enabled() && widget.shouldRender(context)) {
-                renderWidget(context, widget, widgetSettings, graphics.guiWidth(), graphics.guiHeight());
+        ObsOverlayRuntime.beginComponent(ObsOverlayComponent.EC_HUD);
+        try {
+            HudSettings settings = ProfileServices.active().features().hud();
+            HudRenderContext context = new HudRenderContext(
+                    minecraft,
+                    graphics,
+                    HudRenderMode.LIVE,
+                    deltaTracker.getGameTimeDeltaPartialTick(false),
+                    settings
+            );
+            for (HudWidget widget : HudWidgetRegistry.widgets()) {
+                HudWidgetSettings widgetSettings = settings.widget(widget.id());
+                if (widgetSettings.enabled() && widget.shouldRender(context)) {
+                    renderWidget(context, widget, widgetSettings, graphics.guiWidth(), graphics.guiHeight());
+                }
             }
+        } finally {
+            ObsOverlayRuntime.endComponent();
         }
     }
 
