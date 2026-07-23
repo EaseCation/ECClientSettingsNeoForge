@@ -68,14 +68,14 @@ class ProfileJsonCodecTest {
 
     @Test
     void distinguishesNewerSchemaFromCorruption() {
-        String newer = "{\"schemaVersion\":4,"
+        String newer = "{\"schemaVersion\":5,"
                 + "\"activeProfileId\":\"default\",\"profileOrder\":[\"default\"]}";
 
         UnsupportedProfileSchemaException exception = assertThrows(
                 UnsupportedProfileSchemaException.class,
                 () -> codec.decodeIndex(newer.getBytes(StandardCharsets.UTF_8))
         );
-        assertEquals(4, exception.schemaVersion());
+        assertEquals(5, exception.schemaVersion());
     }
 
     private JsonObject encodedProfile(ProfileDefinition profile) {

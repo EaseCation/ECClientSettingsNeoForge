@@ -120,7 +120,7 @@ class ProfileStoreTest {
     void newerSchemaIsUntouchedAndNeverRewritten() throws IOException {
         Path index = temporaryDirectory.resolve("profiles.json");
         Files.createDirectories(temporaryDirectory);
-        String newer = "{\"schemaVersion\":4,"
+        String newer = "{\"schemaVersion\":5,"
                 + "\"activeProfileId\":\"default\",\"profileOrder\":[\"default\"]}";
         Files.writeString(index, newer, StandardCharsets.UTF_8);
 

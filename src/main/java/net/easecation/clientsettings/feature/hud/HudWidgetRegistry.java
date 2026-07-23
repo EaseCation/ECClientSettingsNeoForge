@@ -1,6 +1,7 @@
 package net.easecation.clientsettings.feature.hud;
 
 import net.easecation.clientsettings.feature.hud.widget.ArmorHudWidget;
+import net.easecation.clientsettings.feature.hud.widget.CpsHudWidget;
 import net.easecation.clientsettings.feature.hud.widget.FpsHudWidget;
 import net.easecation.clientsettings.feature.hud.widget.KeystrokesHudWidget;
 import net.easecation.clientsettings.feature.hud.widget.PingHudWidget;
@@ -23,6 +24,8 @@ public final class HudWidgetRegistry {
         register(widgets, new PotionHudWidget());
         register(widgets, new PingHudWidget());
         register(widgets, new FpsHudWidget());
+        register(widgets, CpsHudWidget.left());
+        register(widgets, CpsHudWidget.right());
         register(widgets, new KeystrokesHudWidget());
         if (widgets.size() != HudWidgetId.values().length) {
             throw new IllegalStateException("Every HUD widget ID must have a renderer");

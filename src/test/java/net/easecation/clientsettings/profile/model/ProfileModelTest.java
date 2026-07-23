@@ -15,7 +15,7 @@ class ProfileModelTest {
     void defaultsMatchTheApprovedSchema() {
         ProfileDefinition profile = ProfileDefinition.defaults(false);
 
-        assertEquals(3, profile.schemaVersion());
+        assertEquals(4, profile.schemaVersion());
         assertEquals("default", profile.id());
         assertFalse(profile.features().forceSprint().enabled());
         assertEquals("#CCFFFFFF", profile.features().blockOutline().color().serialized());
@@ -47,6 +47,12 @@ class ProfileModelTest {
         assertEquals(new HudWidgetSettings(
                 false, 0.0, 0.0, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.FPS)
         ), hud.widget(HudWidgetId.FPS));
+        assertEquals(new HudWidgetSettings(
+                false, 0.0, 0.08, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.LEFT_CPS)
+        ), hud.widget(HudWidgetId.LEFT_CPS));
+        assertEquals(new HudWidgetSettings(
+                false, 0.0, 0.16, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.RIGHT_CPS)
+        ), hud.widget(HudWidgetId.RIGHT_CPS));
         assertThrows(
                 UnsupportedOperationException.class,
                 () -> hud.widgets().put(HudWidgetId.FPS, new HudWidgetSettings(true, 0.5, 0.5, 1.0))

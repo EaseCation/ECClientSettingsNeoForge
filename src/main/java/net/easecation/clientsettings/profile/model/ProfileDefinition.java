@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public record ProfileDefinition(int schemaVersion, String id, String name, ProfileFeatures features) {
 
-    public static final int CURRENT_SCHEMA_VERSION = 3;
+    public static final int CURRENT_SCHEMA_VERSION = 4;
     public static final String DEFAULT_ID = "default";
     public static final int MAX_NAME_CODE_POINTS = 64;
 

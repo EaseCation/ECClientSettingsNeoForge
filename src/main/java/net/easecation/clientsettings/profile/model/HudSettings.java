@@ -22,6 +22,12 @@ public record HudSettings(
             HudWidgetId.FPS, new HudWidgetSettings(
                     false, 0.0, 0.0, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.FPS)
             ),
+            HudWidgetId.LEFT_CPS, new HudWidgetSettings(
+                    false, 0.0, 0.08, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.LEFT_CPS)
+            ),
+            HudWidgetId.RIGHT_CPS, new HudWidgetSettings(
+                    false, 0.0, 0.16, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.RIGHT_CPS)
+            ),
             HudWidgetId.KEYSTROKES, new HudWidgetSettings(
                     false, 0.5, 0.08, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.KEYSTROKES)
             )

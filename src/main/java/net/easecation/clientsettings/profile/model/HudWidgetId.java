@@ -5,6 +5,8 @@ public enum HudWidgetId {
     POTIONS("potions"),
     PING("ping"),
     FPS("fps"),
+    LEFT_CPS("left_cps"),
+    RIGHT_CPS("right_cps"),
     KEYSTROKES("keystrokes");
 
     private final String serializedName;

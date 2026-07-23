@@ -5,8 +5,8 @@
 The supplied planning document identifies Keystrokes as a streaming and recording HUD. The core task
 is not competitive automation; it is making the player's current movement, jump, and mouse actions
 legible to an audience. The adjacent CPS request shares the same mouse-input sampling concern, so CPS
-is available as an optional second line inside the two mouse buttons instead of adding another default
-card.
+remains available as an optional second line inside the two mouse buttons. Independent left/right CPS
+widgets are also available for players who want a compact text-only layout without Keystrokes.
 
 The implementation follows this priority:
 
@@ -53,8 +53,8 @@ mode. This means unpressed labels support the same fixed, rainbow wave, and low-
 switch modes as every other HUD. Pressed text deliberately uses one fixed accent so a press remains
 immediately recognizable even when the idle labels are animated.
 
-The project is still pre-release, so strict schema v3 now requires the Keystrokes object and content
-fields. There is no v1/v2 or earlier-v3 migration path.
+The project is still pre-release, so strict schema v4 requires the Keystrokes object, its content fields,
+and the independent left/right CPS widget records. There is no v1/v2/v3 migration path.
 
 ## Input And Privacy Boundary
 

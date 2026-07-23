@@ -259,7 +259,9 @@ public final class ProfileJsonCodec {
     }
 
     private HudSettings decodeHud(JsonObject root) throws IOException {
-        requireOnly(root, "hud", Set.of("armor", "potions", "ping", "fps", "keystrokes"));
+        requireOnly(root, "hud", Set.of(
+                "armor", "potions", "ping", "fps", "left_cps", "right_cps", "keystrokes"
+        ));
         Map<HudWidgetId, HudWidgetSettings> widgets = new EnumMap<>(HudWidgetId.class);
         KeystrokesSettings keystrokes = null;
         for (HudWidgetId id : HudWidgetId.values()) {

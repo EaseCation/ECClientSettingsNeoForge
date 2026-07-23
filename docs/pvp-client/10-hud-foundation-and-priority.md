@@ -2,15 +2,16 @@
 
 ## Goal
 
-Start the deferred HUD phase with a reusable local HUD foundation and the four widgets with the strongest combination of player value and implementation confidence:
+Start the deferred HUD phase with a reusable local HUD foundation and the widgets with the strongest combination of player value and implementation confidence:
 
 1. FPS
 2. Ping
 3. Armor durability
 4. Active potion effects
 5. Keystrokes with optional per-button CPS
+6. Independent left-click and right-click CPS
 
-This phase also adds Profile-backed normalized layout data and an editor for moving, scaling, and styling widgets. It does not add TPS, Crosshair, a standalone CPS card, real-time clock, or game-mode-specific overlays.
+This phase also adds Profile-backed normalized layout data and an editor for moving, scaling, and styling widgets. It does not add TPS, Crosshair, a real-time clock, or game-mode-specific overlays.
 
 ## Why This Slice Comes First
 
@@ -33,12 +34,13 @@ Competitive Minecraft discussion also calls out armor durability, FPS, and ping 
 The resulting development order is:
 
 ```text
-Profile schema v3
+Profile schema v4
   -> normalized HUD layout and renderer
   -> editor and preview
   -> FPS and Ping
   -> Armor and Potion
   -> Keystrokes and optional embedded CPS
+  -> independent left-click and right-click CPS
   -> Crosshair
   -> server-authoritative TPS and mode HUDs
 ```
@@ -64,9 +66,9 @@ The new implementation must explicitly avoid issues already reported against the
 
 Crosshair is deliberately deferred until the ordinary GUI-layer renderer is stable. Ping must never substitute zero for missing data.
 
-## Profile Schema V3
+## Profile Schema V4
 
-HUD state belongs to a Profile because the planning document requires different layouts for different PvP modes. The current pre-release schema v3 stores both HUD layout and reusable per-widget visual style below `features.hud`.
+HUD state belongs to a Profile because the planning document requires different layouts for different PvP modes. The current pre-release schema v4 stores both HUD layout and reusable per-widget visual style below `features.hud`.
 
 Each implemented widget stores:
 
@@ -80,14 +82,14 @@ Normalized coordinates are in `[0, 1]`. Scale is in `[0.5, 3.0]`. The renderer m
 
 Schema rules:
 
-- Writers always produce strict schema v3.
-- Readers accept only strict schema v3; there is no v1/v2 migration because the feature has not shipped.
+- Writers always produce strict schema v4.
+- Readers accept only strict schema v4; there is no v1/v2/v3 migration because the feature has not shipped.
 - Every HUD widget and every style field is required.
 - Unknown fields and unsupported schema versions fail closed.
 
 ## Rendering Architecture
 
-The HUD is registered through `RegisterGuiLayersEvent`, without a HUD Mixin. It renders immediately below the vanilla chat layer so chat remains readable. A small widget registry owns the four implementations and exposes the same measurement and rendering path to the game overlay and editor preview.
+The HUD is registered through `RegisterGuiLayersEvent`, without a HUD Mixin. It renders immediately below the vanilla chat layer so chat remains readable. A small widget registry owns every implementation and exposes the same measurement and rendering path to the game overlay and editor preview.
 
 Render-path rules:
 
@@ -113,7 +115,7 @@ The editor supports:
 - arrow-key movement and `+`/`-` scaling for the initially selected widget;
 - reset for one widget or the complete layout;
 - enable/disable and per-widget style editing from the standalone editor;
-- preview content for all four widgets;
+- preview content for every registered widget;
 - live style preview for color, transparency, border, padding, shadow, and RGB animation;
 - draft-only edits until the parent Cloth Config screen is saved.
 
@@ -158,7 +160,6 @@ Horizontal layout, icon-only mode, ordering, and custom colors remain follow-up 
 
 ## Deferred Work
 
-- A standalone CPS card remains deferred; Keystrokes already provides optional left/right CPS inside the mouse buttons.
 - Crosshair needs isolated render-state and compatibility testing before it can replace or augment vanilla rendering.
 - TPS requires an EaseCation server payload or an explicitly labeled estimate. Until then it would be misleading.
 - Bedwars and other mode HUDs require a server-owned state contract, not Hypixel chat or scoreboard parsing.
@@ -166,7 +167,7 @@ Horizontal layout, icon-only mode, ordering, and custom colors remain follow-up 
 
 ## Automated Acceptance
 
-- Schema v3 HUD layout and style data round-trip exactly.
+- Schema v4 HUD layout and style data round-trip exactly.
 - Invalid normalized coordinates and scale values are rejected.
 - Layout conversion keeps scaled bounds on-screen at small and large GUI dimensions.
 - Snap calculations are deterministic at edges and center lines.
@@ -187,3 +188,4 @@ Horizontal layout, icon-only mode, ordering, and custom colors remain follow-up 
 - Check the overlay together with ModUI, chat, scoreboard, subtitles, and all existing visual features.
 - Rebind movement/jump controls and verify Keystrokes labels and press state follow the active mappings.
 - Toggle movement, jump, mouse, and CPS groups independently; verify key size, gap, corner radius, pressed colors, and transition duration in the live style preview.
+- Enable independent left and right CPS, move and style them separately, and verify neither depends on Keystrokes visibility.
