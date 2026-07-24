@@ -6,6 +6,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.easecation.clientsettings.config.ObsOverlayConfig;
 import net.easecation.clientsettings.feature.obsoverlay.DeferredNameTagPass;
+import net.easecation.clientsettings.feature.obsoverlay.DeferredNameTagPassResult;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayRuntime;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlaySettings;
 import net.easecation.clientsettings.feature.obsoverlay.PlayerAliasService;
@@ -141,12 +142,12 @@ abstract class EntityRendererMixin {
         }
 
         Event[] posted = new Event[1];
-        PassResult result = ecclientsettings$runPass(
+        DeferredNameTagPassResult result = ecclientsettings$runPass(
                 pass,
                 nameTagEvent.getMultiBufferSource(),
                 () -> posted[0] = original.call(eventBus, event)
         );
-        if (result == PassResult.COMPLETE) {
+        if (result == DeferredNameTagPassResult.COMPLETE) {
             return posted[0];
         }
 
@@ -154,7 +155,7 @@ abstract class EntityRendererMixin {
             nameTagEvent.setCanceled(true);
         }
         // In alias mode, skipping third-party event rendering still lets vanilla draw a safe alias.
-        return result == PassResult.BEGIN_FAILED ? nameTagEvent : posted[0];
+        return result == DeferredNameTagPassResult.BEGIN_FAILED ? nameTagEvent : posted[0];
     }
 
     @WrapOperation(
@@ -208,17 +209,17 @@ abstract class EntityRendererMixin {
         if (alias == null) {
             return;
         }
-        PassResult publicResult = ecclientsettings$runPass(
+        DeferredNameTagPassResult publicResult = ecclientsettings$runPass(
                 DeferredNameTagPass.PUBLIC_ALIAS,
                 buffers,
                 () -> original.call(renderer, state, alias, poseStack, buffers, packedLight)
         );
-        if (publicResult == PassResult.BEGIN_FAILED) {
+        if (publicResult == DeferredNameTagPassResult.BEGIN_FAILED) {
             // The alias contains no private identity and is the only safe fallback on the main target.
             original.call(renderer, state, alias, poseStack, buffers, packedLight);
             return;
         }
-        if (publicResult != PassResult.COMPLETE || originalName == null) {
+        if (publicResult != DeferredNameTagPassResult.COMPLETE || originalName == null) {
             return;
         }
         ecclientsettings$runPass(
@@ -231,20 +232,19 @@ abstract class EntityRendererMixin {
     @Unique
     @Nullable
     private static DeferredNameTagPass ecclientsettings$eventPass(PlayerNameTagRenderPlan plan) {
-        return switch (plan) {
-            case PRIVATE_REAL_NAME -> DeferredNameTagPass.PRIVATE_REAL_NAME;
-            default -> null;
-        };
+        return plan == PlayerNameTagRenderPlan.PRIVATE_REAL_NAME
+                ? DeferredNameTagPass.PRIVATE_REAL_NAME
+                : null;
     }
 
     @Unique
-    private static PassResult ecclientsettings$runPass(
+    private static DeferredNameTagPassResult ecclientsettings$runPass(
             DeferredNameTagPass pass,
             MultiBufferSource buffers,
             Runnable draw
     ) {
         if (!ObsOverlayRuntime.beginPlayerNamePass(pass, buffers)) {
-            return PassResult.BEGIN_FAILED;
+            return DeferredNameTagPassResult.BEGIN_FAILED;
         }
         boolean flushed;
         try {
@@ -252,13 +252,6 @@ abstract class EntityRendererMixin {
         } finally {
             flushed = ObsOverlayRuntime.endWorldComponent(buffers);
         }
-        return flushed ? PassResult.COMPLETE : PassResult.FLUSH_FAILED;
-    }
-
-    @Unique
-    private enum PassResult {
-        BEGIN_FAILED,
-        FLUSH_FAILED,
-        COMPLETE
+        return flushed ? DeferredNameTagPassResult.COMPLETE : DeferredNameTagPassResult.FLUSH_FAILED;
     }
 }
