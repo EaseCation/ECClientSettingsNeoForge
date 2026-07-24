@@ -1,10 +1,11 @@
 package net.easecation.clientsettings.client;
 
+import me.shedaniel.clothconfig2.api.AbstractConfigEntry;
+import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
-import me.shedaniel.clothconfig2.api.AbstractConfigEntry;
-import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
+import me.shedaniel.clothconfig2.api.Requirement;
 import net.easecation.clientsettings.ECClientSettings;
 import net.easecation.clientsettings.config.ClientSettingsConfig;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayComponent;
@@ -201,21 +202,17 @@ public final class ClientSettingsScreen {
             category.addEntry(entries.startTextDescription(saveError.copy().withStyle(ChatFormatting.RED)).build());
         }
 
-        category.addEntry(new ObsOverlayStatusEntry());
-        category.addEntry(entries.startTextDescription(
-                Component.translatable("option.ecclientsettings.obs_overlay.compatibility_warning")
-                        .withStyle(ChatFormatting.GOLD)
-        ).build());
+        category.addEntry(new ObsOverlayStatusEntry(false));
 
-        category.addEntry(entries.startTextDescription(
+        var checklist = entries.startSubCategory(
                 Component.translatable("option.ecclientsettings.obs_overlay.setup_heading")
-                        .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
-        ).build());
-        for (int step = 1; step <= 4; step++) {
-            category.addEntry(entries.startTextDescription(Component.translatable(
+        ).setExpanded(true);
+        for (int step = 1; step <= 3; step++) {
+            checklist.add(entries.startTextDescription(Component.translatable(
                     "option.ecclientsettings.obs_overlay.setup_step_" + step
             )).build());
         }
+        category.addEntry(checklist.build());
 
         var general = entries.startSubCategory(
                 Component.translatable("option.ecclientsettings.obs_overlay.group.general")
@@ -262,7 +259,11 @@ public final class ClientSettingsScreen {
         world.add(entries.startTextDescription(
                 Component.translatable("option.ecclientsettings.obs_overlay.player_name_tags.description")
         ).build());
-        world.add(entries.startEnumSelector(
+        world.add(entries.startTextDescription(
+                Component.translatable("option.ecclientsettings.obs_overlay.world.notice")
+                        .withStyle(ChatFormatting.GOLD)
+        ).build());
+        var playerNameModeEntry = entries.startEnumSelector(
                         Component.translatable("option.ecclientsettings.obs_overlay.player_name_tags.mode"),
                         PlayerNameTagMode.class,
                         draft.playerNameTagMode()
@@ -276,7 +277,8 @@ public final class ClientSettingsScreen {
                         "option.ecclientsettings.obs_overlay.player_name_tags.mode.tooltip"
                 ))
                 .setSaveConsumer(draft::setPlayerNameTagMode)
-                .build());
+                .build();
+        world.add(playerNameModeEntry);
         world.add(entries.startEnumSelector(
                         Component.translatable("option.ecclientsettings.obs_overlay.player_alias.format"),
                         PlayerAliasFormat.class,
@@ -289,6 +291,10 @@ public final class ClientSettingsScreen {
                 ))
                 .setTooltip(Component.translatable(
                         "option.ecclientsettings.obs_overlay.player_alias.format.tooltip"
+                ))
+                .setRequirement(Requirement.isValue(
+                        playerNameModeEntry,
+                        PlayerNameTagMode.PSEUDONYMIZE
                 ))
                 .setSaveConsumer(draft::setPlayerAliasFormat)
                 .build());
@@ -305,6 +311,10 @@ public final class ClientSettingsScreen {
                 .setTooltip(Component.translatable(
                         "option.ecclientsettings.obs_overlay.player_alias.color_mode.tooltip"
                 ))
+                .setRequirement(Requirement.isValue(
+                        playerNameModeEntry,
+                        PlayerNameTagMode.PSEUDONYMIZE
+                ))
                 .setSaveConsumer(draft::setPlayerAliasColorMode)
                 .build());
         world.add(entries.startBooleanToggle(
@@ -317,14 +327,6 @@ public final class ClientSettingsScreen {
                 ))
                 .setSaveConsumer(draft::setPlayerNameTagsAutoHide)
                 .build());
-        world.add(entries.startTextDescription(
-                Component.translatable("option.ecclientsettings.obs_overlay.player_name_tags.compatibility")
-                        .withStyle(ChatFormatting.GOLD)
-        ).build());
-        world.add(entries.startTextDescription(
-                Component.translatable("option.ecclientsettings.obs_overlay.world.experimental")
-                        .withStyle(ChatFormatting.GOLD)
-        ).build());
         for (ObsOverlayComponent component : ObsOverlayComponent.values()) {
             if (component.group() == ObsOverlayComponent.Group.WORLD && !component.internal()) {
                 world.add(componentToggle(entries, draft, component));
@@ -360,26 +362,6 @@ public final class ClientSettingsScreen {
                     .setSaveConsumer(enabled -> draft.setScreen(screen, enabled))
                     .build());
         }
-        screens.add(entries.startBooleanToggle(
-                        Component.translatable("option.ecclientsettings.obs_overlay.custom_screens_enabled"),
-                        draft.customHandledScreensEnabled()
-                )
-                .setDefaultValue(ObsOverlaySettings.DEFAULT.customHandledScreensEnabled())
-                .setTooltip(Component.translatable(
-                        "option.ecclientsettings.obs_overlay.custom_screens_enabled.tooltip"
-                ))
-                .setSaveConsumer(draft::setCustomHandledScreensEnabled)
-                .build());
-        screens.add(entries.startStrList(
-                        Component.translatable("option.ecclientsettings.obs_overlay.custom_screen_ids"),
-                        draft.customHandledScreenIds()
-                )
-                .setDefaultValue(ObsOverlaySettings.DEFAULT.customHandledScreenIds())
-                .setExpanded(false)
-                .setTooltip(Component.translatable("option.ecclientsettings.obs_overlay.custom_screen_ids.tooltip"))
-                .setCellErrorSupplier(ClientSettingsScreen::validateMenuId)
-                .setSaveConsumer(draft::setCustomHandledScreenIds)
-                .build());
         category.addEntry(screens.build());
 
         var autoHide = entries.startSubCategory(
@@ -410,13 +392,47 @@ public final class ClientSettingsScreen {
         }
         category.addEntry(autoHide.build());
 
-        category.addEntry(entries.startTextDescription(
+        var technical = entries.startSubCategory(
+                Component.translatable("option.ecclientsettings.obs_overlay.group.technical")
+        ).setExpanded(false);
+        technical.add(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.obs_overlay.custom_screens_enabled"),
+                        draft.customHandledScreensEnabled()
+                )
+                .setDefaultValue(ObsOverlaySettings.DEFAULT.customHandledScreensEnabled())
+                .setTooltip(Component.translatable(
+                        "option.ecclientsettings.obs_overlay.custom_screens_enabled.tooltip"
+                ))
+                .setSaveConsumer(draft::setCustomHandledScreensEnabled)
+                .build());
+        technical.add(entries.startStrList(
+                        Component.translatable("option.ecclientsettings.obs_overlay.custom_screen_ids"),
+                        draft.customHandledScreenIds()
+                )
+                .setDefaultValue(ObsOverlaySettings.DEFAULT.customHandledScreenIds())
+                .setExpanded(false)
+                .setTooltip(Component.translatable("option.ecclientsettings.obs_overlay.custom_screen_ids.tooltip"))
+                .setCellErrorSupplier(ClientSettingsScreen::validateMenuId)
+                .setSaveConsumer(draft::setCustomHandledScreenIds)
+                .build());
+        technical.add(new ObsOverlayStatusEntry(true));
+        technical.add(entries.startTextDescription(
+                Component.translatable("option.ecclientsettings.obs_overlay.compatibility_warning")
+                        .withStyle(ChatFormatting.GOLD)
+        ).build());
+        technical.add(entries.startTextDescription(
+                Component.translatable("option.ecclientsettings.obs_overlay.player_name_tags.compatibility")
+                        .withStyle(ChatFormatting.GOLD)
+        ).build());
+        technical.add(entries.startTextDescription(
+                Component.translatable("option.ecclientsettings.obs_overlay.world.experimental")
+                        .withStyle(ChatFormatting.GOLD)
+        ).build());
+        technical.add(entries.startTextDescription(
                 Component.translatable("option.ecclientsettings.obs_overlay.attribution")
         ).build());
-        category.addEntry(entries.startTextDescription(
-                Component.translatable("option.ecclientsettings.obs_overlay.license")
-        ).build());
-        category.addEntry(new ObsOverlayProjectLinkEntry());
+        technical.add(new ObsOverlayProjectLinkEntry());
+        category.addEntry(technical.build());
     }
 
     private static AbstractConfigListEntry<?> componentToggle(

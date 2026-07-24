@@ -10,6 +10,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.narration.NarratedElementType;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -27,15 +29,34 @@ final class ObsOverlayStatusEntry extends TooltipListEntry<Object> {
 
     private static final int LINE_HEIGHT = 12;
 
+    private final boolean technicalDetails;
+    private final NarratableEntry narrationEntry = new NarratableEntry() {
+        @Override
+        public NarrationPriority narrationPriority() {
+            if (ObsOverlayStatusEntry.this.isFocused()) {
+                return NarrationPriority.FOCUSED;
+            }
+            return hovered ? NarrationPriority.HOVERED : NarrationPriority.NONE;
+        }
+
+        @Override
+        public void updateNarration(NarrationElementOutput output) {
+            output.add(NarratedElementType.TITLE, currentContent().toArray(Component[]::new));
+        }
+    };
     private List<FormattedCharSequence> wrappedLines = List.of();
     private int savedWidth = -1;
     private int savedContentHash;
+    private boolean hovered;
 
-    ObsOverlayStatusEntry() {
+    ObsOverlayStatusEntry(boolean technicalDetails) {
         super(
-                Component.translatable("option.ecclientsettings.obs_overlay.status"),
+                Component.translatable(technicalDetails
+                        ? "option.ecclientsettings.obs_overlay.technical_status"
+                        : "option.ecclientsettings.obs_overlay.summary"),
                 () -> Optional.empty()
         );
+        this.technicalDetails = technicalDetails;
     }
 
     @Override
@@ -52,6 +73,7 @@ final class ObsOverlayStatusEntry extends TooltipListEntry<Object> {
             float partialTick
     ) {
         super.render(graphics, index, y, x, entryWidth, entryHeight, mouseX, mouseY, hovered, partialTick);
+        this.hovered = hovered;
         Font font = Minecraft.getInstance().font;
         List<Component> content = currentContent();
         int contentHash = content.hashCode();
@@ -74,7 +96,10 @@ final class ObsOverlayStatusEntry extends TooltipListEntry<Object> {
 
     @Override
     public int getItemHeight() {
-        return savedWidth < 0 ? 84 : 14 + wrappedLines.size() * LINE_HEIGHT;
+        if (savedWidth < 0) {
+            return technicalDetails ? 84 : 72;
+        }
+        return 14 + wrappedLines.size() * LINE_HEIGHT;
     }
 
     @Override
@@ -94,10 +119,100 @@ final class ObsOverlayStatusEntry extends TooltipListEntry<Object> {
 
     @Override
     public List<? extends NarratableEntry> narratables() {
-        return Collections.emptyList();
+        return List.of(narrationEntry);
     }
 
-    private static List<Component> currentContent() {
+    private List<Component> currentContent() {
+        return technicalDetails ? technicalContent() : summaryContent();
+    }
+
+    private static List<Component> summaryContent() {
+        ObsOverlayHookStatus status = ObsOverlayRuntime.status();
+        ObsOverlaySettings settings = ObsOverlayConfig.current();
+        List<Component> content = new ArrayList<>();
+        boolean blockingStatus = status == ObsOverlayHookStatus.UNSAFE_CAPTURE_ORDER
+                || status == ObsOverlayHookStatus.UNSUPPORTED
+                || status == ObsOverlayHookStatus.FAILED;
+
+        if (!settings.enabled() && !blockingStatus) {
+            content.add(Component.translatable(
+                    "option.ecclientsettings.obs_overlay.summary.current",
+                    Component.translatable("option.ecclientsettings.obs_overlay.summary.disabled")
+                            .withStyle(ChatFormatting.YELLOW)
+            ));
+            content.add(Component.translatable(
+                    "option.ecclientsettings.obs_overlay.summary.action.enable"
+            ).withStyle(ChatFormatting.GRAY));
+            return content;
+        }
+
+        ChatFormatting statusColor = switch (status) {
+            case READY -> ChatFormatting.GOLD;
+            case NOT_INITIALIZED, STOPPED -> ChatFormatting.YELLOW;
+            case UNSAFE_CAPTURE_ORDER, UNSUPPORTED, FAILED -> ChatFormatting.RED;
+        };
+        Component statusValue = Component.translatable(
+                "option.ecclientsettings.obs_overlay.summary.status." + status.name().toLowerCase(Locale.ROOT)
+        ).withStyle(statusColor);
+        content.add(Component.translatable(
+                "option.ecclientsettings.obs_overlay.summary.current",
+                statusValue
+        ));
+        if (settings.enabled()) {
+            content.add(Component.translatable(
+                    "option.ecclientsettings.obs_overlay.summary.player_names",
+                    Component.translatable(
+                            "option.ecclientsettings.obs_overlay.player_name_tags.mode."
+                                    + settings.playerNameTagMode().name().toLowerCase(Locale.ROOT)
+                    )
+            ));
+        } else {
+            content.add(Component.translatable(
+                    "option.ecclientsettings.obs_overlay.summary.master_disabled"
+            ).withStyle(ChatFormatting.YELLOW));
+        }
+
+        if (status == ObsOverlayHookStatus.READY) {
+            if (ObsOverlayRuntime.irisShaderPackInUse() && !settings.failClosed()) {
+                content.add(Component.translatable(
+                        "option.ecclientsettings.obs_overlay.summary.action.shader_unsafe"
+                ).withStyle(ChatFormatting.RED));
+            } else if (!settings.failClosed()) {
+                content.add(Component.translatable(
+                        "option.ecclientsettings.obs_overlay.summary.action.safe_fallback_off"
+                ).withStyle(ChatFormatting.RED));
+            } else if (ObsOverlayRuntime.irisShaderPackInUse()
+                    || ObsOverlayRuntime.irisWorldCompatibilityUnavailable()) {
+                content.add(Component.translatable(
+                        "option.ecclientsettings.obs_overlay.summary.action.safe_fallback"
+                ).withStyle(ChatFormatting.GOLD));
+            }
+
+            if (settings.showTestMarker()) {
+                content.add(Component.translatable(
+                        "option.ecclientsettings.obs_overlay.summary.action.verify"
+                ).withStyle(ChatFormatting.GOLD));
+            } else {
+                content.add(Component.translatable(
+                        "option.ecclientsettings.obs_overlay.summary.action.enable_marker"
+                ).withStyle(ChatFormatting.GOLD));
+            }
+        } else {
+            String actionKey = switch (status) {
+                case NOT_INITIALIZED, STOPPED -> "wait";
+                case UNSAFE_CAPTURE_ORDER -> "restart_order";
+                case UNSUPPORTED -> "unsupported";
+                case FAILED -> "restart_failed";
+                case READY -> throw new IllegalStateException("READY handled above");
+            };
+            content.add(Component.translatable(
+                    "option.ecclientsettings.obs_overlay.summary.action." + actionKey
+            ).withStyle(statusColor));
+        }
+        return content;
+    }
+
+    private static List<Component> technicalContent() {
         ObsOverlayHookStatus status = ObsOverlayRuntime.status();
         ObsOverlaySettings settings = ObsOverlayConfig.current();
         ChatFormatting statusColor = switch (status) {
