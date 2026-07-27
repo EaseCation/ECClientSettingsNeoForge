@@ -8,6 +8,7 @@ public final class ClientSettingsConfig {
     public static final boolean DEFAULT_SWORD_BLOCKING_ANIMATION = false;
     public static final boolean DEFAULT_ALLOW_SERVER_WINDOW_TITLE = true;
     public static final boolean DEFAULT_ALLOW_SERVER_WINDOW_FRAME = true;
+    public static final boolean DEFAULT_RENDER_DISTANCE_AUTO_PENDING = true;
     public static final int PROFILE_MIGRATION_VERSION = 1;
     public static final ModConfigSpec SPEC;
     public static final ModConfigSpec.BooleanValue FORCE_SPRINT;
@@ -15,6 +16,7 @@ public final class ClientSettingsConfig {
     public static final ModConfigSpec.BooleanValue SWORD_BLOCKING_ANIMATION;
     public static final ModConfigSpec.BooleanValue ALLOW_SERVER_WINDOW_TITLE;
     public static final ModConfigSpec.BooleanValue ALLOW_SERVER_WINDOW_FRAME;
+    public static final ModConfigSpec.BooleanValue RENDER_DISTANCE_AUTO_PENDING;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -47,6 +49,12 @@ public final class ClientSettingsConfig {
                 .comment("Allow the connected server to customize the native window title bar colors.")
                 .translation("option.ecclientsettings.server_window_frame")
                 .define("allowFrame", DEFAULT_ALLOW_SERVER_WINDOW_FRAME);
+        builder.pop();
+
+        builder.push("automaticDefaults");
+        RENDER_DISTANCE_AUTO_PENDING = builder
+                .comment("Whether the one-time GPU-based initial render distance is still pending.")
+                .define("renderDistanceAutoPending", DEFAULT_RENDER_DISTANCE_AUTO_PENDING);
         builder.pop();
         SPEC = builder.build();
     }
@@ -82,6 +90,18 @@ public final class ClientSettingsConfig {
     public static void setServerWindowPermissions(boolean allowTitle, boolean allowFrame) {
         ALLOW_SERVER_WINDOW_TITLE.set(allowTitle);
         ALLOW_SERVER_WINDOW_FRAME.set(allowFrame);
+        SPEC.save();
+    }
+
+    public static boolean renderDistanceAutoPending() {
+        return RENDER_DISTANCE_AUTO_PENDING.get();
+    }
+
+    public static void resolveInitialRenderDistance() {
+        if (!RENDER_DISTANCE_AUTO_PENDING.get()) {
+            return;
+        }
+        RENDER_DISTANCE_AUTO_PENDING.set(false);
         SPEC.save();
     }
 }

@@ -9,6 +9,7 @@
     "KeyboardInputMixin",
     "MinecraftTitleMixin",
     "MultiPlayerGameModeMixin",
+    "OptionInstanceMixin",
     "render.LightTextureMixin",
     "render.OverlayTextureAccessor",
     "render.ScreenEffectRendererMixin"

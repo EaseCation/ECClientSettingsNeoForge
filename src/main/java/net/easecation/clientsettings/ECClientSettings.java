@@ -11,6 +11,7 @@ import net.easecation.clientsettings.feature.hud.keystrokes.KeystrokesInputTrack
 import net.easecation.clientsettings.feature.hitcolor.HitColorRuntime;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayGuiLayer;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayRuntime;
+import net.easecation.clientsettings.feature.performance.InitialRenderDistanceController;
 import net.easecation.clientsettings.feature.timechanger.TimeChangerRuntime;
 import net.easecation.clientsettings.feature.zoom.ZoomEvents;
 import net.easecation.clientsettings.window.WindowAppearanceEvents;
@@ -58,6 +59,7 @@ public final class ECClientSettings {
         NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onDisconnected);
         NeoForge.EVENT_BUS.addListener(ObsOverlayRuntime::onLoggingOut);
         NeoForge.EVENT_BUS.addListener(ObsOverlayRuntime::onClientStopping);
+        NeoForge.EVENT_BUS.addListener(InitialRenderDistanceController::onLoggingIn);
 
         LOGGER.info("EaseCation client settings initialized");
     }

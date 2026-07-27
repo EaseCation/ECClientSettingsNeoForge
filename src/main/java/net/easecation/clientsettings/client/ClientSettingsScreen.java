@@ -85,8 +85,10 @@ public final class ClientSettingsScreen {
         ConfigEntryBuilder entries = builder.entryBuilder();
         boolean[] allowTitle = {initialAllowTitle};
         boolean[] allowFrame = {initialAllowFrame};
+        ViaBedrockOptimizationDraft optimizationDraft = ViaBedrockOptimizationDraft.current();
 
         addProfileCategory(builder, entries, parent, profiles, draft, saveError);
+        ViaBedrockOptimizationCategory.add(builder, entries, optimizationDraft);
         addMovementCategory(builder, entries, draft);
         addCombatCategory(builder, entries);
         addHudCategory(builder, entries, draft);
@@ -99,6 +101,7 @@ public final class ClientSettingsScreen {
                 // Persist privacy controls first so an unrelated Profile write cannot prevent protection changes.
                 obsOverlayDraft.save();
                 draft.save(profiles);
+                optimizationDraft.save();
                 ClientSettingsConfig.setServerWindowPermissions(allowTitle[0], allowFrame[0]);
                 WindowAppearanceController.getInstance().reconcilePermissions();
             } catch (IOException | RuntimeException exception) {
