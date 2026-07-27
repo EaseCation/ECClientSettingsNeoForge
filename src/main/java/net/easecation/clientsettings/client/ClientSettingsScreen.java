@@ -169,6 +169,14 @@ public final class ClientSettingsScreen {
                 .setTooltip(Component.translatable("option.ecclientsettings.force_sprint.tooltip"))
                 .setSaveConsumer(draft::setForceSprint)
                 .build());
+        category.addEntry(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.sneak_animation"),
+                        ClientSettingsConfig.sneakAnimation()
+                )
+                .setDefaultValue(ClientSettingsConfig.DEFAULT_SNEAK_ANIMATION)
+                .setTooltip(Component.translatable("option.ecclientsettings.sneak_animation.tooltip"))
+                .setSaveConsumer(ClientSettingsConfig.SNEAK_ANIMATION::set)
+                .build());
     }
 
     private static void addCombatCategory(ConfigBuilder builder, ConfigEntryBuilder entries) {

@@ -5,6 +5,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 public final class ClientSettingsConfig {
 
     public static final boolean DEFAULT_FORCE_SPRINT = true;
+    public static final boolean DEFAULT_SNEAK_ANIMATION = true;
     public static final boolean DEFAULT_SWORD_BLOCKING_ANIMATION = false;
     public static final boolean DEFAULT_ALLOW_SERVER_WINDOW_TITLE = true;
     public static final boolean DEFAULT_ALLOW_SERVER_WINDOW_FRAME = true;
@@ -12,6 +13,7 @@ public final class ClientSettingsConfig {
     public static final int PROFILE_MIGRATION_VERSION = 1;
     public static final ModConfigSpec SPEC;
     public static final ModConfigSpec.BooleanValue FORCE_SPRINT;
+    public static final ModConfigSpec.BooleanValue SNEAK_ANIMATION;
     public static final ModConfigSpec.IntValue PROFILE_MIGRATION;
     public static final ModConfigSpec.BooleanValue SWORD_BLOCKING_ANIMATION;
     public static final ModConfigSpec.BooleanValue ALLOW_SERVER_WINDOW_TITLE;
@@ -25,6 +27,10 @@ public final class ClientSettingsConfig {
                 .comment("Deprecated migration source. Runtime force sprint is stored in the active Profile.")
                 .translation("option.ecclientsettings.force_sprint")
                 .define("forceSprint", DEFAULT_FORCE_SPRINT);
+        SNEAK_ANIMATION = builder
+                .comment("Smoothly transition the first-person camera when entering or leaving a crouch.")
+                .translation("option.ecclientsettings.sneak_animation")
+                .define("sneakAnimation", DEFAULT_SNEAK_ANIMATION);
         builder.pop();
 
         builder.push("migration");
@@ -68,6 +74,10 @@ public final class ClientSettingsConfig {
 
     public static int profileMigrationVersion() {
         return PROFILE_MIGRATION.get();
+    }
+
+    public static boolean sneakAnimation() {
+        return SNEAK_ANIMATION.get();
     }
 
     public static void setProfileMigrationVersion(int version) {

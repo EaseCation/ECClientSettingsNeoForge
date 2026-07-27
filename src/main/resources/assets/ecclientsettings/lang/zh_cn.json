@@ -153,6 +153,8 @@
   "option.ecclientsettings.zoom.smooth_camera.tooltip": "缩放时临时开启平滑转向，结束后恢复。",
   "option.ecclientsettings.force_sprint": "强制疾跑",
   "option.ecclientsettings.force_sprint.tooltip": "持续向前移动时自动尝试疾跑，仍遵守原版疾跑限制。",
+  "option.ecclientsettings.sneak_animation": "潜行动画",
+  "option.ecclientsettings.sneak_animation.tooltip": "潜行时平滑降低或抬高第一人称视角。关闭后将立即蹲下，并在松开潜行键且头顶空间允许时立即站起。",
   "option.ecclientsettings.profile.current": "当前配置方案：%s",
   "option.ecclientsettings.profile.manage": "配置方案管理",
   "option.ecclientsettings.profile.manage.action": "打开配置方案管理",

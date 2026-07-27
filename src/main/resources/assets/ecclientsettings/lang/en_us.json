@@ -153,6 +153,8 @@
   "option.ecclientsettings.zoom.smooth_camera.tooltip": "Temporarily enables smooth turning while zoomed and restores it afterward.",
   "option.ecclientsettings.force_sprint": "Force Sprint",
   "option.ecclientsettings.force_sprint.tooltip": "Automatically attempts to sprint while moving forward and still follows vanilla sprint restrictions.",
+  "option.ecclientsettings.sneak_animation": "Sneak Animation",
+  "option.ecclientsettings.sneak_animation.tooltip": "Smoothly lowers and raises the first-person camera while sneaking. Disable it to crouch and stand immediately.",
   "option.ecclientsettings.profile.current": "Current Profile: %s",
   "option.ecclientsettings.profile.manage": "Profile Management",
   "option.ecclientsettings.profile.manage.action": "Open Profile Management",
