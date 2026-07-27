@@ -5,6 +5,7 @@
   "mixins": [],
   "client": [
     "client.ClientPacketListenerMixin",
+    "client.MinecraftGuiScaleMixin",
     "ItemMixin",
     "KeyboardInputMixin",
     "MinecraftTitleMixin",
