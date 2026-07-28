@@ -7,16 +7,16 @@ import net.easecation.clientsettings.feature.hud.HudWidget;
 
 abstract class TextHudWidget implements HudWidget {
 
-    private static final HudSize SIZE = new HudSize(60, 10);
+    private static final HudSize DEFAULT_SIZE = new HudSize(60, 10);
 
     @Override
     public final HudSize previewSize() {
-        return SIZE;
+        return size();
     }
 
     @Override
     public final HudSize measure(HudRenderContext context) {
-        return SIZE;
+        return size();
     }
 
     @Override
@@ -28,5 +28,9 @@ abstract class TextHudWidget implements HudWidget {
     }
 
     protected abstract String text(HudRenderContext context);
+
+    protected HudSize size() {
+        return DEFAULT_SIZE;
+    }
 
 }

@@ -53,6 +53,9 @@ class ProfileModelTest {
         assertEquals(new HudWidgetSettings(
                 false, 0.0, 0.16, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.RIGHT_CPS)
         ), hud.widget(HudWidgetId.RIGHT_CPS));
+        assertEquals(new HudWidgetSettings(
+                false, 0.0, 0.24, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.COMBINED_CPS)
+        ), hud.widget(HudWidgetId.COMBINED_CPS));
         assertThrows(
                 UnsupportedOperationException.class,
                 () -> hud.widgets().put(HudWidgetId.FPS, new HudWidgetSettings(true, 0.5, 0.5, 1.0))

@@ -5,6 +5,8 @@ final class HudEditorInteraction {
     static final double MIN_SCALE = 0.5;
     static final double MAX_SCALE = 3.0;
     static final double SCALE_STEP = 0.1;
+    static final long DOUBLE_CLICK_INTERVAL_MILLIS = 400L;
+    static final double DOUBLE_CLICK_MAX_DISTANCE = 5.0;
 
     private HudEditorInteraction() {
     }
@@ -41,6 +43,22 @@ final class HudEditorInteraction {
                 oldX + (oldWidth - newWidth) / 2,
                 oldY + (oldHeight - newHeight) / 2
         );
+    }
+
+    static boolean isDoubleClick(
+            long previousClickMillis,
+            long currentClickMillis,
+            double deltaX,
+            double deltaY
+    ) {
+        long interval = currentClickMillis - previousClickMillis;
+        return previousClickMillis >= 0L
+                && interval >= 0L
+                && interval <= DOUBLE_CLICK_INTERVAL_MILLIS
+                && Double.isFinite(deltaX)
+                && Double.isFinite(deltaY)
+                && deltaX * deltaX + deltaY * deltaY
+                <= DOUBLE_CLICK_MAX_DISTANCE * DOUBLE_CLICK_MAX_DISTANCE;
     }
 
     record Point(int x, int y) {

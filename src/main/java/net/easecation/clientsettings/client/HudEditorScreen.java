@@ -11,6 +11,7 @@ import net.easecation.clientsettings.profile.model.HudWidgetId;
 import net.easecation.clientsettings.profile.model.HudWidgetSettings;
 import net.easecation.clientsettings.profile.runtime.ProfileManager;
 import net.easecation.clientsettings.profile.runtime.ProfileServices;
+import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -27,8 +28,10 @@ public final class HudEditorScreen extends Screen {
 
     private static final int OVERLAY_COLOR = 0x58000000;
     private static final int NORMAL_OUTLINE_COLOR = 0x80FFFFFF;
+    private static final int DISABLED_OUTLINE_COLOR = 0x55FFFFFF;
     private static final int HOVERED_OUTLINE_COLOR = 0xFFFFFFFF;
     private static final int SELECTED_OUTLINE_COLOR = 0xFFFFC247;
+    private static final int DISABLED_WIDGET_OVERLAY = 0x880B0D10;
     private static final int GUIDE_COLOR = 0xFF41B9FF;
     private static final int PALETTE_BACKGROUND = 0xC0101216;
     private static final int PALETTE_OUTLINE = 0x805B7188;
@@ -42,17 +45,20 @@ public final class HudEditorScreen extends Screen {
     private final ProfileManager profiles;
     private final boolean standalone;
     private HudWidgetId selected;
+    private HudWidgetId lastClickedWidget;
+    private long lastWidgetClickMillis = -1L;
+    private double lastWidgetClickX;
+    private double lastWidgetClickY;
     private boolean dragging;
-    private boolean snapping = true;
+    private double dragStartMouseX;
+    private double dragStartMouseY;
     private double dragOffsetX;
     private double dragOffsetY;
     private Integer verticalGuide;
     private Integer horizontalGuide;
     private Component error;
-    private Button styleButton;
     private Button toggleSelectedButton;
-    private Button resetSelectedButton;
-    private Button snappingButton;
+    private Button styleButton;
     private int paletteX;
     private int paletteY;
     private int paletteWidth;
@@ -79,7 +85,7 @@ public final class HudEditorScreen extends Screen {
 
     @Override
     protected void init() {
-        int buttonCount = standalone ? 8 : 6;
+        int buttonCount = standalone ? 5 : 4;
         paletteWidth = Math.min(174, Math.max(120, this.width - 24));
         paletteHeight = PALETTE_PADDING * 2
                 + buttonCount * BUTTON_HEIGHT
@@ -97,31 +103,17 @@ public final class HudEditorScreen extends Screen {
                     button -> openAllSettings()
             );
             y += BUTTON_HEIGHT + BUTTON_GAP;
-            toggleSelectedButton = addPaletteButton(
-                    toggleSelectedMessage(),
-                    y,
-                    button -> toggleSelectedWidget()
-            );
-            y += BUTTON_HEIGHT + BUTTON_GAP;
         }
+        toggleSelectedButton = addPaletteButton(
+                toggleSelectedMessage(),
+                y,
+                button -> toggleSelectedWidget()
+        );
+        y += BUTTON_HEIGHT + BUTTON_GAP;
         styleButton = addPaletteButton(
                 Component.translatable("button.ecclientsettings.hud.edit_style"),
                 y,
                 button -> openSelectedStyle()
-        );
-        y += BUTTON_HEIGHT + BUTTON_GAP;
-        snappingButton = addPaletteButton(snappingMessage(), y, button -> toggleSnapping());
-        y += BUTTON_HEIGHT + BUTTON_GAP;
-        resetSelectedButton = addPaletteButton(
-                Component.translatable("button.ecclientsettings.hud.reset_selected"),
-                y,
-                button -> resetSelectedLayout()
-        );
-        y += BUTTON_HEIGHT + BUTTON_GAP;
-        addPaletteButton(
-                Component.translatable("button.ecclientsettings.hud.reset_layout"),
-                y,
-                button -> resetLayout()
         );
         y += BUTTON_HEIGHT + BUTTON_GAP;
         addPaletteButton(CommonComponents.GUI_CANCEL, y, button -> cancelAndClose());
@@ -156,9 +148,19 @@ public final class HudEditorScreen extends Screen {
             HudWidgetSettings settings = draft.hudSettings().widget(id);
             HudBounds bounds = HudRenderer.renderPreview(graphics, id, draft.hudSettings());
             boolean hovered = bounds.contains(mouseX, mouseY);
+            if (!settings.enabled()) {
+                graphics.fill(
+                        bounds.x(),
+                        bounds.y(),
+                        bounds.right(),
+                        bounds.bottom(),
+                        DISABLED_WIDGET_OVERLAY
+                );
+            }
             int outlineColor = id == selected
                     ? SELECTED_OUTLINE_COLOR
-                    : hovered ? HOVERED_OUTLINE_COLOR : NORMAL_OUTLINE_COLOR;
+                    : hovered ? HOVERED_OUTLINE_COLOR
+                    : settings.enabled() ? NORMAL_OUTLINE_COLOR : DISABLED_OUTLINE_COLOR;
             graphics.renderOutline(
                     bounds.x() - 1,
                     bounds.y() - 1,
@@ -264,10 +266,6 @@ public final class HudEditorScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0) {
-            return super.mouseClicked(mouseX, mouseY, button);
-        }
-
         if (isInsidePalette(mouseX, mouseY)) {
             boolean handled = super.mouseClicked(mouseX, mouseY, button);
             if (!handled) {
@@ -279,11 +277,44 @@ public final class HudEditorScreen extends Screen {
         HudWidgetId target = widgetAt(mouseX, mouseY);
         if (target != null) {
             select(target);
+            if (button == 1) {
+                clearDoubleClickCandidate();
+                toggleSelectedWidget();
+                return true;
+            }
+            if (button != 0) {
+                clearDoubleClickCandidate();
+                return super.mouseClicked(mouseX, mouseY, button);
+            }
+            long clickMillis = Util.getMillis();
+            if (target == lastClickedWidget
+                    && HudEditorInteraction.isDoubleClick(
+                            lastWidgetClickMillis,
+                            clickMillis,
+                            mouseX - lastWidgetClickX,
+                            mouseY - lastWidgetClickY
+                    )) {
+                clearDoubleClickCandidate();
+                clearDragState();
+                openSelectedStyle();
+                return true;
+            }
+            lastClickedWidget = target;
+            lastWidgetClickMillis = clickMillis;
+            lastWidgetClickX = mouseX;
+            lastWidgetClickY = mouseY;
             HudBounds bounds = bounds(target);
             dragging = true;
+            dragStartMouseX = mouseX;
+            dragStartMouseY = mouseY;
             dragOffsetX = mouseX - bounds.x();
             dragOffsetY = mouseY - bounds.y();
             return true;
+        }
+
+        clearDoubleClickCandidate();
+        if (button != 0) {
+            return super.mouseClicked(mouseX, mouseY, button);
         }
 
         if (super.mouseClicked(mouseX, mouseY, button)) {
@@ -305,13 +336,17 @@ public final class HudEditorScreen extends Screen {
         if (!dragging || selected == null || button != 0) {
             return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
         }
+        if (Math.abs(mouseX - dragStartMouseX) > 3.0
+                || Math.abs(mouseY - dragStartMouseY) > 3.0) {
+            clearDoubleClickCandidate();
+        }
 
         HudWidgetSettings settings = draft.hudSettings().widget(selected);
         HudBounds currentBounds = bounds(selected);
         int proposedX = (int) Math.round(mouseX - dragOffsetX);
         int proposedY = (int) Math.round(mouseY - dragOffsetY);
         HudSnapEngine.SnapResult snapped;
-        if (snapping && !Screen.hasAltDown()) {
+        if (!Screen.hasAltDown()) {
             snapped = HudSnapEngine.snap(
                     proposedX,
                     proposedY,
@@ -407,6 +442,14 @@ public final class HudEditorScreen extends Screen {
                 }
                 case GLFW.GLFW_KEY_MINUS, GLFW.GLFW_KEY_KP_SUBTRACT -> {
                     scaleWidget(selected, -1.0, null, null);
+                    return true;
+                }
+                case GLFW.GLFW_KEY_R -> {
+                    if ((modifiers & GLFW.GLFW_MOD_SHIFT) != 0) {
+                        resetLayout();
+                    } else {
+                        resetSelectedLayout();
+                    }
                     return true;
                 }
                 default -> {
@@ -555,28 +598,13 @@ public final class HudEditorScreen extends Screen {
 
     private void updateSelectionActions() {
         boolean active = selected != null;
-        if (styleButton != null) {
-            styleButton.active = active;
-        }
         if (toggleSelectedButton != null) {
             toggleSelectedButton.active = active;
             toggleSelectedButton.setMessage(toggleSelectedMessage());
         }
-        if (resetSelectedButton != null) {
-            resetSelectedButton.active = active;
+        if (styleButton != null) {
+            styleButton.active = active;
         }
-    }
-
-    private void toggleSnapping() {
-        snapping = !snapping;
-        snappingButton.setMessage(snappingMessage());
-        clearGuides();
-    }
-
-    private Component snappingMessage() {
-        return Component.translatable(snapping
-                ? "button.ecclientsettings.hud.snapping_on"
-                : "button.ecclientsettings.hud.snapping_off");
     }
 
     private Component toggleSelectedMessage() {
@@ -652,6 +680,11 @@ public final class HudEditorScreen extends Screen {
     private void clearGuides() {
         verticalGuide = null;
         horizontalGuide = null;
+    }
+
+    private void clearDoubleClickCandidate() {
+        lastClickedWidget = null;
+        lastWidgetClickMillis = -1L;
     }
 
     private static String widgetTranslationKey(HudWidgetId id) {

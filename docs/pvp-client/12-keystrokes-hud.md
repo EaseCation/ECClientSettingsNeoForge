@@ -53,8 +53,9 @@ mode. This means unpressed labels support the same fixed, rainbow wave, and low-
 switch modes as every other HUD. Pressed text deliberately uses one fixed accent so a press remains
 immediately recognizable even when the idle labels are animated.
 
-The project is still pre-release, so strict schema v4 requires the Keystrokes object, its content fields,
-and the independent left/right CPS widget records. There is no v1/v2/v3 migration path.
+Schema v4 writers include the complete Keystrokes and CPS records. Readers fill missing feature, HUD,
+style, and content fields from current defaults while continuing to reject unknown or invalid values.
+There is no v1/v2/v3 migration path.
 
 ## Input And Privacy Boundary
 

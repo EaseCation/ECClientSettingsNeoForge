@@ -33,9 +33,17 @@ public final class CpsHudWidget extends TextHudWidget {
 
     @Override
     protected String text(HudRenderContext context) {
-        int cps = context.preview()
-                ? (leftButton ? 8 : 4)
-                : (leftButton ? KeystrokesInputTracker.leftCps() : KeystrokesInputTracker.rightCps());
-        return label + " " + (cps > MAX_DISPLAYED_CPS ? "99+" : Math.max(0, cps));
+        return label + " " + formatCps(currentCps(context, leftButton));
+    }
+
+    static int currentCps(HudRenderContext context, boolean leftButton) {
+        if (context.preview()) {
+            return leftButton ? 8 : 4;
+        }
+        return leftButton ? KeystrokesInputTracker.leftCps() : KeystrokesInputTracker.rightCps();
+    }
+
+    static String formatCps(int cps) {
+        return cps > MAX_DISPLAYED_CPS ? "99+" : Integer.toString(Math.max(0, cps));
     }
 }

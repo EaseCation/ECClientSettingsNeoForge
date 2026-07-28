@@ -108,15 +108,18 @@ Right Shift and the pause-menu button open the same complete client settings scr
 editor is an explicit action in the HUD category; the global shortcut does not unexpectedly switch to
 a specialized editing mode.
 
-The editor exposes a compact command palette while the game remains visible:
+The editor exposes a compact command palette while the game remains visible. Direct widget actions
+stay on the widget instead of competing with the global exit controls:
 
 - All Settings;
+- Enable or disable the selected widget;
 - Edit Selected Style;
-- Snapping on/off;
-- Reset Selected;
-- Reset All;
 - Cancel;
 - Save and Exit, or Apply when entered from the parent settings screen.
+
+Double-clicking a widget opens its style page, right-clicking toggles it, and disabled previews are
+visually faded while remaining selectable. `R` resets the selected widget, `Shift+R` resets the whole
+layout, and holding Alt temporarily bypasses snapping.
 
 The command palette is visually and interactively above previews: its buttons and gaps consume input,
 so a hidden widget can never steal Save or Cancel clicks. The first enabled widget is selected on entry
@@ -142,4 +145,5 @@ opening directly during play remains non-pausing so the player can judge the liv
 - Verify fixed text color, animated gradient, low-frequency whole-text switching, alpha, shadow, padding,
   border width/color, and background color for every widget.
 - Confirm Escape cancels, Save persists after restart, Reset Selected leaves other widgets untouched,
-  and profile switching immediately changes layout and style.
+and profile switching immediately changes layout and style. Confirm disabled widgets remain selectable
+as faded previews, can be toggled from both editor entry paths, and open style editing on double-click.

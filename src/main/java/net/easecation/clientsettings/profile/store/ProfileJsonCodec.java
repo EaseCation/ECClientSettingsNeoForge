@@ -88,13 +88,19 @@ public final class ProfileJsonCodec {
     public ProfileDefinition decodeProfile(byte[] serialized) throws IOException {
         JsonObject root = parseObject(serialized, "Profile");
         checkSchema(root);
-        requireOnly(root, "Profile", Set.of("schemaVersion", "id", "name", "features"));
+        requireOnly(root, "Profile", Set.of("schemaVersion", "id", "name", "features"), Set.of("features"));
         try {
+            JsonObject configuredFeatures = root.has("features")
+                    ? requireObject(root, "features")
+                    : new JsonObject();
             return new ProfileDefinition(
                     ProfileDefinition.CURRENT_SCHEMA_VERSION,
                     requireString(root, "id"),
                     requireString(root, "name"),
-                    decodeFeatures(requireObject(root, "features"))
+                    decodeFeatures(withDefaults(
+                            configuredFeatures,
+                            encodeFeatures(ProfileFeatures.DEFAULT)
+                    ))
             );
         } catch (IllegalArgumentException | NullPointerException exception) {
             throw invalid("Invalid Profile", exception);
@@ -260,7 +266,7 @@ public final class ProfileJsonCodec {
 
     private HudSettings decodeHud(JsonObject root) throws IOException {
         requireOnly(root, "hud", Set.of(
-                "armor", "potions", "ping", "fps", "left_cps", "right_cps", "keystrokes"
+                "armor", "potions", "ping", "fps", "left_cps", "right_cps", "combined_cps", "keystrokes"
         ));
         Map<HudWidgetId, HudWidgetSettings> widgets = new EnumMap<>(HudWidgetId.class);
         KeystrokesSettings keystrokes = null;
@@ -359,6 +365,23 @@ public final class ProfileJsonCodec {
         return (GSON.toJson(root) + System.lineSeparator()).getBytes(StandardCharsets.UTF_8);
     }
 
+    private static JsonObject withDefaults(JsonObject configured, JsonObject defaults) {
+        JsonObject merged = defaults.deepCopy();
+        for (Map.Entry<String, JsonElement> entry : configured.entrySet()) {
+            JsonElement defaultValue = defaults.get(entry.getKey());
+            JsonElement configuredValue = entry.getValue();
+            if (defaultValue != null && defaultValue.isJsonObject() && configuredValue.isJsonObject()) {
+                merged.add(
+                        entry.getKey(),
+                        withDefaults(configuredValue.getAsJsonObject(), defaultValue.getAsJsonObject())
+                );
+            } else {
+                merged.add(entry.getKey(), configuredValue.deepCopy());
+            }
+        }
+        return merged;
+    }
+
     private static JsonObject object(String property, boolean value) {
         JsonObject object = new JsonObject();
         object.addProperty(property, value);
@@ -366,13 +389,25 @@ public final class ProfileJsonCodec {
     }
 
     private static void requireOnly(JsonObject object, String description, Set<String> allowed) throws IOException {
+        requireOnly(object, description, allowed, Set.of());
+    }
+
+    private static void requireOnly(
+            JsonObject object,
+            String description,
+            Set<String> allowed,
+            Set<String> optional
+    ) throws IOException {
+        if (!allowed.containsAll(optional)) {
+            throw new IllegalArgumentException("Optional fields must also be allowed");
+        }
         for (String key : object.keySet()) {
             if (!allowed.contains(key)) {
                 throw invalid(description + " contains unknown field: " + key);
             }
         }
         for (String key : allowed) {
-            if (!object.has(key)) {
+            if (!optional.contains(key) && !object.has(key)) {
                 throw invalid(description + " is missing field: " + key);
             }
         }

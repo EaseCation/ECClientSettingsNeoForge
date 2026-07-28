@@ -3,7 +3,9 @@ package net.easecation.clientsettings.client;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HudEditorInteractionTest {
 
@@ -32,5 +34,15 @@ class HudEditorInteractionTest {
         assertThrows(IllegalArgumentException.class, () ->
                 HudEditorInteraction.centeredOrigin(0, 0, 10, 10, -1, 10)
         );
+    }
+
+    @Test
+    void doubleClickRequiresARecentMonotonicSecondClick() {
+        assertTrue(HudEditorInteraction.isDoubleClick(1_000L, 1_400L, 3.0, 4.0));
+        assertFalse(HudEditorInteraction.isDoubleClick(1_000L, 1_401L, 0.0, 0.0));
+        assertFalse(HudEditorInteraction.isDoubleClick(-1L, 100L, 0.0, 0.0));
+        assertFalse(HudEditorInteraction.isDoubleClick(1_000L, 999L, 0.0, 0.0));
+        assertFalse(HudEditorInteraction.isDoubleClick(1_000L, 1_100L, 5.1, 0.0));
+        assertFalse(HudEditorInteraction.isDoubleClick(1_000L, 1_100L, Double.NaN, 0.0));
     }
 }

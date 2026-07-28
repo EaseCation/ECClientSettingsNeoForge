@@ -84,7 +84,8 @@ Schema rules:
 
 - Writers always produce strict schema v4.
 - Readers accept only strict schema v4; there is no v1/v2/v3 migration because the feature has not shipped.
-- Every HUD widget and every style field is required.
+- Missing feature blocks, HUD widgets, and nested style/content fields inherit current defaults.
+- Profile identity fields remain required; unknown fields and invalid configured values still fail closed.
 - Unknown fields and unsupported schema versions fail closed.
 
 ## Rendering Architecture
