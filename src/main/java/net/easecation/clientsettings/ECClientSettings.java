@@ -2,6 +2,7 @@ package net.easecation.clientsettings;
 
 import net.easecation.clientsettings.client.ClientSettingsEvents;
 import net.easecation.clientsettings.client.ClientSettingsKeyMappings;
+import net.easecation.clientsettings.client.BedrockBlockLodIntegration;
 import net.easecation.clientsettings.client.input.ClientInputDispatcher;
 import net.easecation.clientsettings.config.ClientSettingsConfig;
 import net.easecation.clientsettings.config.ObsOverlayConfig;
@@ -37,6 +38,7 @@ public final class ECClientSettings {
         modEventBus.addListener(ClientSettingsKeyMappings::register);
         modEventBus.addListener(HudRenderer::register);
         modEventBus.addListener(ObsOverlayGuiLayer::register);
+        modEventBus.addListener(BedrockBlockLodIntegration::onClientSetup);
 
         NeoForge.EVENT_BUS.addListener(ClientInputDispatcher::onClientTick);
         NeoForge.EVENT_BUS.addListener(TimeChangerRuntime::onClientTick);

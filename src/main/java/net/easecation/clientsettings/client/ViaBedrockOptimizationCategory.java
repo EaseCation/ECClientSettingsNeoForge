@@ -86,6 +86,75 @@ final class ViaBedrockOptimizationCategory {
         addFrozenMeshSettings(category, entries, draft, custom);
         addVisibilitySettings(category, entries, draft, custom);
         addParticleSettings(category, entries, draft, custom);
+        addBlockModelLodSettings(category, entries, draft, custom);
+    }
+
+    private static void addBlockModelLodSettings(
+            ConfigCategory category,
+            ConfigEntryBuilder entries,
+            ViaBedrockOptimizationDraft draft,
+            Requirement custom
+    ) {
+        var group = entries.startSubCategory(Component.translatable(
+                "option.ecclientsettings.performance.group.block_model_lod"
+        )).setExpanded(false);
+        group.add(entries.startTextDescription(Component.translatable(
+                "option.ecclientsettings.performance.block_model_lod.description"
+        )).build());
+        if (!draft.blockModelLodAvailable()) {
+            group.add(entries.startTextDescription(Component.translatable(
+                    "option.ecclientsettings.performance.block_model_lod.unavailable"
+            ).withStyle(ChatFormatting.GOLD)).build());
+            category.addEntry(group.build());
+            return;
+        }
+
+        group.add(entries.startTextDescription(Component.translatable(
+                "option.ecclientsettings.performance.block_model_lod.status",
+                draft.blockModelLodStatus()
+        ).withStyle(ChatFormatting.GRAY)).build());
+        var enabledEntry = entries.startBooleanToggle(
+                        label("block_model_lod_enabled"),
+                        draft.blockModelLodEnabled()
+                )
+                .setDefaultValue(false)
+                .setTooltip(tooltip("block_model_lod_enabled"))
+                .setRequirement(custom)
+                .setSaveConsumer(draft::setBlockModelLodEnabled)
+                .build();
+        group.add(enabledEntry);
+        Requirement enabledCustom = Requirement.all(custom, Requirement.isTrue(enabledEntry));
+        group.add(entries.startIntField(
+                        label("block_model_lod_high"),
+                        draft.blockModelLodHighDistance()
+                )
+                .setDefaultValue(4)
+                .setMin(0).setMax(16)
+                .setTooltip(tooltip("block_model_lod_high"))
+                .setRequirement(enabledCustom)
+                .setSaveConsumer(draft::setBlockModelLodHighDistance)
+                .build());
+        group.add(entries.startIntField(
+                        label("block_model_lod_low"),
+                        draft.blockModelLodLowDistance()
+                )
+                .setDefaultValue(6)
+                .setMin(1).setMax(18)
+                .setTooltip(tooltip("block_model_lod_low"))
+                .setRequirement(enabledCustom)
+                .setSaveConsumer(draft::setBlockModelLodLowDistance)
+                .build());
+        group.add(entries.startIntField(
+                        label("block_model_lod_rebuilds"),
+                        draft.blockModelLodMaxRebuilds()
+                )
+                .setDefaultValue(1)
+                .setMin(1).setMax(8)
+                .setTooltip(tooltip("block_model_lod_rebuilds"))
+                .setRequirement(enabledCustom)
+                .setSaveConsumer(draft::setBlockModelLodMaxRebuilds)
+                .build());
+        category.addEntry(group.build());
     }
 
     private static void addAnimationSettings(

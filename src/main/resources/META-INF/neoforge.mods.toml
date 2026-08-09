@@ -51,3 +51,9 @@ versionRange="[1.0.0,)"
 ordering="AFTER"
 side="CLIENT"
 
+[[dependencies.${mod_id}]]
+modId="bedrockloader"
+type="optional"
+versionRange="[1.0.0,)"
+ordering="AFTER"
+side="CLIENT"

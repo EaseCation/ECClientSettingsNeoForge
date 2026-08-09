@@ -26,6 +26,12 @@ final class ViaBedrockOptimizationDraft {
     private boolean particleTickLodEnabled;
     private int particleTickLodNearDistance;
     private int particleTickLodFarDistance;
+    private final boolean blockModelLodAvailable;
+    private boolean blockModelLodEnabled;
+    private int blockModelLodHighDistance;
+    private int blockModelLodLowDistance;
+    private int blockModelLodMaxRebuilds;
+    private final String blockModelLodStatus;
 
     private ViaBedrockOptimizationDraft(LodConfig config) {
         this.config = config;
@@ -50,6 +56,13 @@ final class ViaBedrockOptimizationDraft {
         particleTickLodEnabled = details.particleTickLodEnabled();
         particleTickLodNearDistance = details.particleTickLodNearDistance();
         particleTickLodFarDistance = details.particleTickLodFarDistance();
+        BedrockBlockLodIntegration.Snapshot blockLod = BedrockBlockLodIntegration.snapshot();
+        blockModelLodAvailable = blockLod.available();
+        blockModelLodEnabled = blockLod.enabled();
+        blockModelLodHighDistance = blockLod.highDistanceSections();
+        blockModelLodLowDistance = blockLod.lowDistanceSections();
+        blockModelLodMaxRebuilds = blockLod.maxRebuildsPerFrame();
+        blockModelLodStatus = blockLod.adapterStatus();
     }
 
     static ViaBedrockOptimizationDraft current() {
@@ -120,15 +133,38 @@ final class ViaBedrockOptimizationDraft {
     void setParticleTickLodNearDistance(int value) { particleTickLodNearDistance = value; }
     int particleTickLodFarDistance() { return particleTickLodFarDistance; }
     void setParticleTickLodFarDistance(int value) { particleTickLodFarDistance = value; }
+    boolean blockModelLodAvailable() { return blockModelLodAvailable; }
+    boolean blockModelLodEnabled() { return blockModelLodEnabled; }
+    void setBlockModelLodEnabled(boolean value) { blockModelLodEnabled = value; }
+    int blockModelLodHighDistance() { return blockModelLodHighDistance; }
+    void setBlockModelLodHighDistance(int value) { blockModelLodHighDistance = value; }
+    int blockModelLodLowDistance() { return blockModelLodLowDistance; }
+    void setBlockModelLodLowDistance(int value) { blockModelLodLowDistance = value; }
+    int blockModelLodMaxRebuilds() { return blockModelLodMaxRebuilds; }
+    void setBlockModelLodMaxRebuilds(int value) { blockModelLodMaxRebuilds = value; }
+    String blockModelLodStatus() { return blockModelLodStatus; }
 
     void save() {
         LodDetailedSettings details = detailedSettings();
-        if (mode == config.getOptimizationMode()
-                && manualPreset == config.getManualPreset()
-                && details.normalized().equals(config.getCustomSettings())) {
-            return;
+        if (mode != config.getOptimizationMode()
+                || manualPreset != config.getManualPreset()
+                || !details.normalized().equals(config.getCustomSettings())) {
+            config.applySelectionAndSave(mode, manualPreset, details);
         }
-        config.applySelectionAndSave(mode, manualPreset, details);
+        if (blockModelLodAvailable) {
+            LodConfig.Preset selectedPreset = BedrockBlockLodIntegration.selectedPreset(
+                    mode, manualPreset, config.getAutomaticPreset());
+            var custom = new BedrockBlockLodIntegration.Policy(
+                    blockModelLodEnabled,
+                    blockModelLodHighDistance,
+                    blockModelLodLowDistance,
+                    blockModelLodMaxRebuilds
+            );
+            BedrockBlockLodIntegration.apply(
+                    BedrockBlockLodIntegration.policyForPreset(selectedPreset, custom),
+                    "settings preset " + selectedPreset
+            );
+        }
     }
 
     private LodDetailedSettings detailedSettings() {
