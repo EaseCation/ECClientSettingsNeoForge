@@ -5,6 +5,9 @@ import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.PointerByReference;
 import net.easecation.clientsettings.ECClientSettings;
+import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayInstallException;
+import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayInstallation;
+import org.lwjgl.system.Callback;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -16,151 +19,211 @@ import java.util.function.Consumer;
  * Native hook adapted from OBS Overlay by Artem Dzhemesiuk (MIT).
  * The hook intentionally runs after OBS game capture when OBS attaches after Minecraft.
  */
-public final class ObsOverlayHook implements AutoCloseable {
+public final class ObsOverlayHook implements ObsOverlayInstallation {
 
-    private static final int MH_OK = 0;
-    private static final int MH_ERROR_ALREADY_INITIALIZED = 1;
+    static final int MH_OK = 0;
+    static final int MH_ERROR_ALREADY_INITIALIZED = 1;
     private static final String[] OBS_HOOK_MODULES = {
             "graphics-hook64.dll", "graphics-hook32.dll", "graphics-hook.dll"
     };
 
-    private final Kernel32 kernel32;
-    private final MinHook minHook;
+    private final NativePlatform platform;
     private final Pointer swapBuffers;
-    private final MinHook.SwapBuffersCallback callback;
-    private final Function original;
-    private final Consumer<Throwable> failureHandler;
-    private final boolean unsafeCaptureOrder;
-    private volatile boolean closed;
+    private final CallbackClosure callbackClosure;
+    private final CallbackState callbackState;
+    private final boolean ownsInitialization;
+    private boolean unsafeCaptureOrder;
+    private boolean initialized;
+    private boolean created;
+    private boolean enabled;
+    private boolean callbackFreed;
+    private boolean closed;
 
     private ObsOverlayHook(
-            Kernel32 kernel32,
-            MinHook minHook,
+            NativePlatform platform,
             Pointer swapBuffers,
-            MinHook.SwapBuffersCallback callback,
-            Function original,
-            Consumer<Throwable> failureHandler,
+            CallbackClosure callbackClosure,
+            CallbackState callbackState,
+            boolean ownsInitialization,
             boolean unsafeCaptureOrder
     ) {
-        this.kernel32 = kernel32;
-        this.minHook = minHook;
+        this.platform = platform;
         this.swapBuffers = swapBuffers;
-        this.callback = callback;
-        this.original = original;
-        this.failureHandler = failureHandler;
+        this.callbackClosure = callbackClosure;
+        this.callbackState = callbackState;
+        this.ownsInitialization = ownsInitialization;
         this.unsafeCaptureOrder = unsafeCaptureOrder;
+        this.initialized = true;
     }
 
-    public static ObsOverlayHook install(
+    static ObsOverlayHook install(
             long targetWindowHandle,
             Runnable compositor,
             Consumer<Throwable> failureHandler
-    ) throws IOException {
+    ) throws Exception {
+        return install(
+                targetWindowHandle,
+                compositor,
+                failureHandler,
+                JnaNativePlatform.create(),
+                LwjglCallbackClosure::create
+        );
+    }
+
+    static ObsOverlayHook install(
+            long targetWindowHandle,
+            Runnable compositor,
+            Consumer<Throwable> failureHandler,
+            NativePlatform platform,
+            CallbackFactory callbackFactory
+    ) throws Exception {
         Objects.requireNonNull(compositor, "compositor");
         Objects.requireNonNull(failureHandler, "failureHandler");
-        requireSupportedPlatform();
+        Objects.requireNonNull(platform, "platform");
+        Objects.requireNonNull(callbackFactory, "callbackFactory");
         if (targetWindowHandle == 0L) {
             throw new IOException("Minecraft native window handle is unavailable");
         }
 
-        Kernel32 kernel32 = Native.load("Kernel32", Kernel32.class);
-        User32 user32 = Native.load("User32", User32.class);
-        boolean obsAlreadyLoaded = isObsCaptureLoaded(kernel32);
-        Pointer openGl = kernel32.GetModuleHandleA("opengl32.dll");
-        if (isNull(openGl)) {
-            throw new IOException("opengl32.dll is not loaded");
-        }
-        Pointer swapBuffers = kernel32.GetProcAddress(openGl, "wglSwapBuffers");
+        boolean obsAlreadyLoaded = platform.isObsCaptureLoaded();
+        Pointer swapBuffers = platform.swapBuffers();
         if (isNull(swapBuffers)) {
             throw new IOException("wglSwapBuffers was not found");
         }
 
-        Path library = NativeLibraryExtractor.extractMinHook();
-        MinHook minHook = Native.load(library.toAbsolutePath().toString(), MinHook.class);
-        int initializeStatus = minHook.MH_Initialize();
+        int initializeStatus = platform.initialize();
         if (initializeStatus != MH_OK && initializeStatus != MH_ERROR_ALREADY_INITIALIZED) {
             throw new IOException("MinHook initialization failed with status " + initializeStatus);
         }
-
-        PointerByReference originalReference = new PointerByReference();
-        Function[] originalHolder = new Function[1];
-        ThreadLocal<Boolean> inCallback = ThreadLocal.withInitial(() -> false);
-        MinHook.SwapBuffersCallback callback = deviceContext -> {
-            Function original = originalHolder[0];
-            if (original == null) {
-                return 0;
-            }
-            if (Boolean.TRUE.equals(inCallback.get())) {
-                return original.invokeInt(new Object[]{deviceContext});
-            }
-            inCallback.set(true);
-            try {
-                Pointer window = user32.WindowFromDC(deviceContext);
-                if (!isNull(window) && Pointer.nativeValue(window) == targetWindowHandle) {
-                    compositor.run();
-                }
-            } catch (Throwable throwable) {
-                try {
-                    failureHandler.accept(throwable);
-                } catch (Throwable reportingFailure) {
-                    ECClientSettings.LOGGER.error("OBS overlay failure handler failed", reportingFailure);
-                }
-            } finally {
-                inCallback.remove();
-            }
-            return original.invokeInt(new Object[]{deviceContext});
-        };
-
-        int createStatus = minHook.MH_CreateHook(swapBuffers, callback, originalReference);
-        if (createStatus != MH_OK || isNull(originalReference.getValue())) {
-            if (createStatus == MH_OK) {
-                minHook.MH_RemoveHook(swapBuffers);
-            }
-            minHook.MH_Uninitialize();
-            throw new IOException("MinHook could not create wglSwapBuffers hook (status " + createStatus + ")");
-        }
-        Function original = Function.getFunction(originalReference.getValue(), Function.ALT_CONVENTION);
-        originalHolder[0] = original;
-        int enableStatus = minHook.MH_EnableHook(swapBuffers);
-        if (enableStatus != MH_OK) {
-            minHook.MH_RemoveHook(swapBuffers);
-            minHook.MH_Uninitialize();
-            throw new IOException("MinHook could not enable wglSwapBuffers hook (status " + enableStatus + ")");
-        }
-
-        // Treat the narrow attach/install race as unsafe too. A false positive only asks for a restart;
-        // a false negative could put the local compositor before OBS capture.
-        boolean unsafeCaptureOrder = obsAlreadyLoaded || isObsCaptureLoaded(kernel32);
-
-        return new ObsOverlayHook(
-                kernel32, minHook, swapBuffers, callback, original, failureHandler, unsafeCaptureOrder
+        boolean ownsInitialization = initializeStatus == MH_OK;
+        CallbackState callbackState = new CallbackState(
+                targetWindowHandle,
+                compositor,
+                failureHandler,
+                platform
         );
+        CallbackClosure callbackClosure;
+        try {
+            callbackClosure = callbackFactory.create(callbackState::invoke);
+        } catch (RuntimeException | LinkageError failure) {
+            if (ownsInitialization) {
+                int uninitializeStatus = platform.uninitialize();
+                if (uninitializeStatus != MH_OK) {
+                    failure.addSuppressed(statusFailure("uninitialize", uninitializeStatus));
+                }
+            }
+            throw failure;
+        }
+
+        ObsOverlayHook hook = new ObsOverlayHook(
+                platform,
+                swapBuffers,
+                callbackClosure,
+                callbackState,
+                ownsInitialization,
+                obsAlreadyLoaded
+        );
+        PointerByReference originalReference = new PointerByReference();
+        int createStatus;
+        try {
+            createStatus = platform.createHook(swapBuffers, callbackClosure.pointer(), originalReference);
+        } catch (RuntimeException | LinkageError failure) {
+            throw hook.rollbackInstall(safeMessage(failure), failure);
+        }
+        if (createStatus != MH_OK) {
+            throw hook.rollbackInstall(
+                    "MinHook could not create wglSwapBuffers hook (status " + createStatus + ")"
+            );
+        }
+        hook.created = true;
+        Pointer originalPointer = originalReference.getValue();
+        if (isNull(originalPointer)) {
+            throw hook.rollbackInstall("MinHook created wglSwapBuffers hook without a trampoline");
+        }
+        try {
+            callbackState.setOriginal(platform.original(originalPointer));
+            int enableStatus = platform.enableHook(swapBuffers);
+            if (enableStatus != MH_OK) {
+                throw new IOException(
+                        "MinHook could not enable wglSwapBuffers hook (status " + enableStatus + ")"
+                );
+            }
+            hook.enabled = true;
+            hook.unsafeCaptureOrder = obsAlreadyLoaded || platform.isObsCaptureLoaded();
+        } catch (Exception | LinkageError failure) {
+            throw hook.rollbackInstall(safeMessage(failure), failure);
+        }
+        return hook;
     }
 
+    @Override
     public boolean unsafeCaptureOrder() {
         return unsafeCaptureOrder;
     }
 
+    @Override
     public boolean isObsCaptureLoaded() {
-        return isObsCaptureLoaded(kernel32);
+        return platform.isObsCaptureLoaded();
     }
 
     @Override
-    public void close() {
+    public synchronized void uninstall() throws Exception {
         if (closed) {
             return;
         }
+        if (enabled) {
+            int status = platform.disableHook(swapBuffers);
+            if (status != MH_OK) {
+                throw statusFailure("disable", status);
+            }
+            enabled = false;
+        }
+        if (created) {
+            callbackState.awaitQuiescence();
+            int status = platform.removeHook(swapBuffers);
+            if (status != MH_OK) {
+                throw statusFailure("remove", status);
+            }
+            created = false;
+        }
+        if (!callbackFreed) {
+            callbackClosure.free();
+            callbackFreed = true;
+        }
+        if (initialized && ownsInitialization) {
+            int status = platform.uninitialize();
+            if (status != MH_OK) {
+                throw statusFailure("uninitialize", status);
+            }
+        }
+        initialized = false;
         closed = true;
-        logCloseFailure("disable", minHook.MH_DisableHook(swapBuffers));
-        logCloseFailure("remove", minHook.MH_RemoveHook(swapBuffers));
-        logCloseFailure("uninitialize", minHook.MH_Uninitialize());
-        // Keep native callback/function strongly reachable until the hook has been removed.
-        callback.hashCode();
-        original.hashCode();
-        failureHandler.hashCode();
     }
 
-    public static boolean supportedPlatform() {
+    boolean callbackFreed() {
+        return callbackFreed;
+    }
+
+    private ObsOverlayInstallException rollbackInstall(String message) {
+        return rollbackInstall(message, new IOException(message));
+    }
+
+    private ObsOverlayInstallException rollbackInstall(String message, Throwable failure) {
+        try {
+            uninstall();
+            return new ObsOverlayInstallException(message, failure);
+        } catch (Exception | LinkageError rollbackFailure) {
+            failure.addSuppressed(rollbackFailure);
+            return new ObsOverlayInstallException(message, failure, this);
+        }
+    }
+
+    private static String safeMessage(Throwable throwable) {
+        String message = throwable.getMessage();
+        return message == null || message.isBlank() ? throwable.getClass().getSimpleName() : message;
+    }
+
+    static boolean supportedPlatform() {
         String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
         String architecture = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
         boolean x64 = architecture.equals("amd64") || architecture.equals("x86_64") || architecture.equals("x64");
@@ -172,28 +235,252 @@ public final class ObsOverlayHook implements AutoCloseable {
         return os.contains("win") && (x64 || x86);
     }
 
-    private static void requireSupportedPlatform() throws IOException {
+    static void requireSupportedPlatform() throws IOException {
         if (!supportedPlatform()) {
             throw new IOException("OBS overlay supports Windows x64/x86 only");
         }
     }
 
-    private static boolean isObsCaptureLoaded(Kernel32 kernel32) {
-        for (String module : OBS_HOOK_MODULES) {
-            if (!isNull(kernel32.GetModuleHandleA(module))) {
-                return true;
-            }
-        }
-        return false;
+    private static IOException statusFailure(String operation, int status) {
+        return new IOException("MinHook " + operation + " failed with status " + status);
+    }
+
+    static Function stdcallFunction(Pointer pointer) {
+        return Function.getFunction(pointer, Function.ALT_CONVENTION);
     }
 
     private static boolean isNull(Pointer pointer) {
         return pointer == null || Pointer.nativeValue(pointer) == 0L;
     }
 
-    private static void logCloseFailure(String operation, int status) {
-        if (status != MH_OK) {
-            ECClientSettings.LOGGER.warn("MinHook {} returned status {} while stopping OBS overlay", operation, status);
+    @FunctionalInterface
+    interface CallbackFactory {
+        CallbackClosure create(SwapBuffersCallback callback);
+    }
+
+    interface CallbackClosure {
+        Pointer pointer();
+
+        void free();
+    }
+
+    @FunctionalInterface
+    interface SwapBuffersCallback {
+        int invoke(long deviceContext);
+    }
+
+    @FunctionalInterface
+    interface OriginalSwapBuffers {
+        int invoke(long deviceContext);
+    }
+
+    interface NativePlatform {
+        boolean isObsCaptureLoaded();
+
+        Pointer swapBuffers() throws IOException;
+
+        int initialize();
+
+        int createHook(Pointer target, Pointer detour, PointerByReference original);
+
+        int enableHook(Pointer target);
+
+        int disableHook(Pointer target);
+
+        int removeHook(Pointer target);
+
+        int uninitialize();
+
+        long windowFromDeviceContext(long deviceContext);
+
+        OriginalSwapBuffers original(Pointer pointer);
+    }
+
+    private static final class CallbackState {
+        private final long targetWindowHandle;
+        private final Runnable compositor;
+        private final Consumer<Throwable> failureHandler;
+        private final NativePlatform platform;
+        private final ThreadLocal<Boolean> inCallback = ThreadLocal.withInitial(() -> false);
+        private volatile OriginalSwapBuffers original;
+        private int activeCallbacks;
+
+        private CallbackState(
+                long targetWindowHandle,
+                Runnable compositor,
+                Consumer<Throwable> failureHandler,
+                NativePlatform platform
+        ) {
+            this.targetWindowHandle = targetWindowHandle;
+            this.compositor = compositor;
+            this.failureHandler = failureHandler;
+            this.platform = platform;
+        }
+
+        private void setOriginal(OriginalSwapBuffers original) {
+            this.original = Objects.requireNonNull(original, "original");
+        }
+
+        private int invoke(long deviceContext) {
+            enterCallback();
+            try {
+                return invokeInstalled(deviceContext);
+            } finally {
+                exitCallback();
+            }
+        }
+
+        private int invokeInstalled(long deviceContext) {
+            OriginalSwapBuffers currentOriginal = original;
+            if (currentOriginal == null) {
+                throw new IllegalStateException("wglSwapBuffers callback invoked before its trampoline was available");
+            }
+            if (Boolean.TRUE.equals(inCallback.get())) {
+                return currentOriginal.invoke(deviceContext);
+            }
+            inCallback.set(true);
+            try {
+                long window = platform.windowFromDeviceContext(deviceContext);
+                if (window != 0L && window == targetWindowHandle) {
+                    compositor.run();
+                }
+            } catch (Throwable throwable) {
+                try {
+                    failureHandler.accept(throwable);
+                } catch (Throwable reportingFailure) {
+                    ECClientSettings.LOGGER.error("OBS overlay failure handler failed", reportingFailure);
+                }
+            } finally {
+                inCallback.remove();
+            }
+            return currentOriginal.invoke(deviceContext);
+        }
+
+        private synchronized void enterCallback() {
+            activeCallbacks++;
+        }
+
+        private synchronized void exitCallback() {
+            activeCallbacks--;
+            if (activeCallbacks == 0) {
+                notifyAll();
+            }
+        }
+
+        private synchronized void awaitQuiescence() throws InterruptedException {
+            while (activeCallbacks != 0) {
+                wait();
+            }
+        }
+    }
+
+    private record LwjglCallbackClosure(SwapBuffersCallbackI callback, long address) implements CallbackClosure {
+
+        private static LwjglCallbackClosure create(SwapBuffersCallback callback) {
+            SwapBuffersCallbackI callbackInterface = callback::invoke;
+            return new LwjglCallbackClosure(callbackInterface, callbackInterface.address());
+        }
+
+        @Override
+        public Pointer pointer() {
+            return new Pointer(address);
+        }
+
+        @Override
+        public void free() {
+            Callback.free(address);
+        }
+    }
+
+    private static final class JnaNativePlatform implements NativePlatform {
+        private final Kernel32 kernel32;
+        private final User32 user32;
+        private final MinHook minHook;
+        private final Pointer swapBuffers;
+
+        private JnaNativePlatform(
+                Kernel32 kernel32,
+                User32 user32,
+                MinHook minHook,
+                Pointer swapBuffers
+        ) {
+            this.kernel32 = kernel32;
+            this.user32 = user32;
+            this.minHook = minHook;
+            this.swapBuffers = swapBuffers;
+        }
+
+        private static JnaNativePlatform create() throws IOException {
+            Kernel32 kernel32 = Native.load("Kernel32", Kernel32.class);
+            User32 user32 = Native.load("User32", User32.class);
+            Pointer openGl = kernel32.GetModuleHandleA("opengl32.dll");
+            if (isNull(openGl)) {
+                throw new IOException("opengl32.dll is not loaded");
+            }
+            Pointer swapBuffers = kernel32.GetProcAddress(openGl, "wglSwapBuffers");
+            if (isNull(swapBuffers)) {
+                throw new IOException("wglSwapBuffers was not found");
+            }
+            Path library = NativeLibraryExtractor.extractMinHook();
+            MinHook minHook = Native.load(library.toAbsolutePath().toString(), MinHook.class);
+            return new JnaNativePlatform(kernel32, user32, minHook, swapBuffers);
+        }
+
+        @Override
+        public boolean isObsCaptureLoaded() {
+            for (String module : OBS_HOOK_MODULES) {
+                if (!isNull(kernel32.GetModuleHandleA(module))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public Pointer swapBuffers() {
+            return swapBuffers;
+        }
+
+        @Override
+        public int initialize() {
+            return minHook.MH_Initialize();
+        }
+
+        @Override
+        public int createHook(Pointer target, Pointer detour, PointerByReference original) {
+            return minHook.MH_CreateHook(target, detour, original);
+        }
+
+        @Override
+        public int enableHook(Pointer target) {
+            return minHook.MH_EnableHook(target);
+        }
+
+        @Override
+        public int disableHook(Pointer target) {
+            return minHook.MH_DisableHook(target);
+        }
+
+        @Override
+        public int removeHook(Pointer target) {
+            return minHook.MH_RemoveHook(target);
+        }
+
+        @Override
+        public int uninitialize() {
+            return minHook.MH_Uninitialize();
+        }
+
+        @Override
+        public long windowFromDeviceContext(long deviceContext) {
+            Pointer window = user32.WindowFromDC(new Pointer(deviceContext));
+            return isNull(window) ? 0L : Pointer.nativeValue(window);
+        }
+
+        @Override
+        public OriginalSwapBuffers original(Pointer pointer) {
+            Function function = stdcallFunction(pointer);
+            return deviceContext -> function.invokeInt(new Object[]{new Pointer(deviceContext)});
         }
     }
 }

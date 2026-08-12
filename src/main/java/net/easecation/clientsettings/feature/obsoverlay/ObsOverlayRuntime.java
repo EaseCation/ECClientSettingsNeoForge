@@ -4,7 +4,6 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import net.easecation.clientsettings.ECClientSettings;
 import net.easecation.clientsettings.config.ObsOverlayConfig;
-import net.easecation.clientsettings.feature.obsoverlay.nativehook.ObsOverlayHook;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.render.GuiRenderer;
@@ -27,11 +26,11 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.entity.SignText;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppingEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.gui.PictureInPictureRendererRegistration;
 import org.joml.Matrix4f;
-import org.lwjgl.glfw.GLFWNativeWin32;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -45,56 +44,116 @@ public final class ObsOverlayRuntime {
     private static final List<DeferredNameTagDraw> DEFERRED_PUBLIC_PLAYER_NAMES = new ArrayList<>();
     private static final List<DeferredNameTagDraw> DEFERRED_PRIVATE_PLAYER_NAMES = new ArrayList<>();
     private static final ThreadLocal<DeferredNameTagPass> DEFERRED_NAME_TAG_PASS = new ThreadLocal<>();
+    private static final ObsOverlayLifecycle LIFECYCLE = new ObsOverlayLifecycle(ObsOverlayRuntime::install);
     private static volatile ObsOverlayRenderer renderer;
-    private static volatile ObsOverlayHook hook;
-    private static volatile ObsOverlayHookStatus status = ObsOverlayHookStatus.NOT_INITIALIZED;
-    private static volatile String failureDetail = "";
+    private static volatile Minecraft client;
+    private static volatile Throwable lastLoggedFailure;
     private static volatile GuiRenderState mainGuiState;
     private static volatile List<PictureInPictureRendererRegistration<?>> pictureInPictureRenderers;
 
     private ObsOverlayRuntime() {
     }
 
-    public static synchronized void initialize(Minecraft minecraft) {
-        if (status != ObsOverlayHookStatus.NOT_INITIALIZED) {
-            return;
+    public static void onClientStarted(ClientStartedEvent event) {
+        client = event.getClient();
+        LIFECYCLE.onClientStarted();
+        logLifecycleFailure("Could not initialize OBS privacy overlay");
+    }
+
+    public static void onConfigLoaded(ObsOverlaySettings settings) {
+        runOnClientThread(() -> {
+            LIFECYCLE.onConfigLoaded(settings.enabled());
+            if (settings.enabled() && LIFECYCLE.unsafeCaptureOrder()) {
+                ECClientSettings.LOGGER.warn(
+                        "OBS overlay enabled after OBS game capture was already attached; fail-closed behavior is {}",
+                        settings.failClosed()
+                );
+            }
+            logLifecycleFailure("Could not apply OBS overlay configuration");
+        });
+    }
+
+    public static void onConfigUnloaded() {
+        runOnClientThread(() -> {
+            LIFECYCLE.onConfigUnloaded();
+            logLifecycleFailure("Could not stop OBS overlay while unloading its configuration");
+        });
+    }
+
+    private static ObsOverlayInstallation install() throws Exception {
+        Minecraft currentClient = client;
+        if (currentClient == null) {
+            throw new IllegalStateException("Minecraft client has not started");
         }
-        ObsOverlayConfig.refresh();
+        List<PictureInPictureRendererRegistration<?>> registrations = pictureInPictureRenderers;
+        if (registrations == null) {
+            throw new IllegalStateException("GUI picture-in-picture registrations were not captured");
+        }
+
+        ObsOverlayRenderer installingRenderer = new ObsOverlayRenderer(currentClient, registrations);
+        renderer = installingRenderer;
         try {
-            if (!ObsOverlayHook.supportedPlatform()) {
-                status = ObsOverlayHookStatus.UNSUPPORTED;
-                failureDetail = "Windows x64/x86 required";
-                return;
-            }
-            List<PictureInPictureRendererRegistration<?>> registrations = pictureInPictureRenderers;
-            if (registrations == null) {
-                throw new IllegalStateException("GUI picture-in-picture registrations were not captured");
-            }
-            renderer = new ObsOverlayRenderer(minecraft, registrations);
-            long windowHandle = GLFWNativeWin32.glfwGetWin32Window(minecraft.getWindow().getWindow());
-            hook = ObsOverlayHook.install(
-                    windowHandle,
+            ObsOverlayInstallation nativeInstallation = ObsOverlayNativeProvider.install(
+                    currentClient.getWindow().getWindow(),
                     ObsOverlayRuntime::compositeAfterCapture,
                     ObsOverlayRuntime::onCompositorFailure
             );
-            status = hook.unsafeCaptureOrder()
-                    ? ObsOverlayHookStatus.UNSAFE_CAPTURE_ORDER
-                    : ObsOverlayHookStatus.READY;
+            RuntimeInstallation installed = new RuntimeInstallation(installingRenderer, nativeInstallation);
             boolean viaBedrockLoaded = ModList.get().isLoaded("viabedrockutility");
             boolean viaBedrockDeferredNamesReady = ViaBedrockCompatibility.deferredNameTagHookAvailable();
             ECClientSettings.LOGGER.info(
-                    "OBS privacy overlay initialized: status={}, Sodium={}, Iris={}, ImmediatelyFast={}, ViaBedrockUtility={}, ViaBedrockDeferredNames={}",
-                    status,
+                    "OBS privacy overlay installed: unsafeCaptureOrder={}, Sodium={}, Iris={}, ImmediatelyFast={}, ViaBedrockUtility={}, ViaBedrockDeferredNames={}",
+                    installed.unsafeCaptureOrder(),
                     ModList.get().isLoaded("sodium"),
                     ModList.get().isLoaded("iris"),
                     ModList.get().isLoaded("immediatelyfast"),
                     viaBedrockLoaded,
                     viaBedrockLoaded ? viaBedrockDeferredNamesReady : "not-installed"
             );
-        } catch (Exception | LinkageError exception) {
-            status = ObsOverlayHookStatus.FAILED;
-            failureDetail = safeMessage(exception);
-            ECClientSettings.LOGGER.error("Could not initialize OBS privacy overlay", exception);
+            return installed;
+        } catch (ObsOverlayInstallException failure) {
+            if (failure.retainedInstallation() != null) {
+                throw new ObsOverlayInstallException(
+                        failure.getMessage(),
+                        failure,
+                        new RuntimeInstallation(installingRenderer, failure.retainedInstallation())
+                );
+            }
+            closeRendererAfterInstallFailure(installingRenderer, failure);
+            throw failure;
+        } catch (Exception | LinkageError failure) {
+            closeRendererAfterInstallFailure(installingRenderer, failure);
+            throw failure;
+        }
+    }
+
+    private static void closeRendererAfterInstallFailure(ObsOverlayRenderer installingRenderer, Throwable failure) {
+        if (renderer == installingRenderer) {
+            renderer = null;
+        }
+        try {
+            installingRenderer.close();
+        } catch (RuntimeException | LinkageError closeFailure) {
+            failure.addSuppressed(closeFailure);
+        }
+    }
+
+    private static void runOnClientThread(Runnable action) {
+        Minecraft currentClient = client;
+        if (currentClient == null || currentClient.isSameThread()) {
+            action.run();
+        } else {
+            currentClient.execute(action);
+        }
+    }
+
+    private static void logLifecycleFailure(String message) {
+        Throwable failure = LIFECYCLE.failure();
+        if (failure == null) {
+            lastLoggedFailure = null;
+        } else if (failure != lastLoggedFailure) {
+            lastLoggedFailure = failure;
+            ECClientSettings.LOGGER.error(message, failure);
         }
     }
 
@@ -462,20 +521,33 @@ public final class ObsOverlayRuntime {
     }
 
     public static ObsOverlayHookStatus status() {
-        return status;
+        return switch (LIFECYCLE.state()) {
+            case ACTIVE -> LIFECYCLE.unsafeCaptureOrder()
+                    ? ObsOverlayHookStatus.UNSAFE_CAPTURE_ORDER
+                    : ObsOverlayHookStatus.READY;
+            case FAILED -> ObsOverlayHookStatus.FAILED;
+            case DISABLED, UNINSTALLING -> ObsOverlayHookStatus.STOPPED;
+            case WAITING_FOR_CONFIG, READY, INSTALLING -> ObsOverlayHookStatus.NOT_INITIALIZED;
+        };
+    }
+
+    public static ObsOverlayLifecycleState lifecycleState() {
+        return LIFECYCLE.state();
     }
 
     public static String failureDetail() {
-        return failureDetail;
+        Throwable failure = LIFECYCLE.failure();
+        return failure == null ? "" : safeMessage(failure);
     }
 
     public static boolean protectionReady() {
-        return status == ObsOverlayHookStatus.READY && renderer != null;
+        return LIFECYCLE.state() == ObsOverlayLifecycleState.ACTIVE
+                && !LIFECYCLE.unsafeCaptureOrder()
+                && renderer != null;
     }
 
     public static boolean obsGameCaptureDetected() {
-        ObsOverlayHook current = hook;
-        return current != null && current.isObsCaptureLoaded();
+        return LIFECYCLE.isObsCaptureLoaded();
     }
 
     public static boolean irisWorldCompatibilityUnavailable() {
@@ -486,27 +558,9 @@ public final class ObsOverlayRuntime {
         return IrisCompatibility.shaderPackInUse();
     }
 
-    public static void onSettingsChanged(ObsOverlaySettings settings) {
-        if (settings.enabled() && status == ObsOverlayHookStatus.UNSAFE_CAPTURE_ORDER) {
-            ECClientSettings.LOGGER.warn(
-                    "OBS overlay enabled after OBS game capture was already attached; fail-closed behavior is {}",
-                    settings.failClosed()
-            );
-        }
-    }
-
-    public static synchronized void stop() {
-        ObsOverlayHook currentHook = hook;
-        hook = null;
-        if (currentHook != null) {
-            currentHook.close();
-        }
-        ObsOverlayRenderer currentRenderer = renderer;
-        renderer = null;
-        if (currentRenderer != null) {
-            retryFailedWorldFlushes();
-            currentRenderer.close();
-        }
+    public static void stop() {
+        LIFECYCLE.stop();
+        logLifecycleFailure("Could not stop OBS privacy overlay cleanly");
         CAPTURE_STACK.clear();
         FAILED_WORLD_FLUSHES.clear();
         DEFERRED_PUBLIC_PLAYER_NAMES.clear();
@@ -515,7 +569,7 @@ public final class ObsOverlayRuntime {
         PlayerAliasService.reset();
         mainGuiState = null;
         pictureInPictureRenderers = null;
-        status = ObsOverlayHookStatus.STOPPED;
+        client = null;
     }
 
     public static void onClientStopping(ClientStoppingEvent event) {
@@ -694,7 +748,10 @@ public final class ObsOverlayRuntime {
     }
 
     private static void onCompositorFailure(Throwable throwable) {
-        markProtectionFailed("OBS overlay compositor failed; privacy controls are now fail-closed", throwable);
+        runOnClientThread(() -> markProtectionFailed(
+                "OBS overlay compositor failed; privacy controls are now fail-closed",
+                throwable
+        ));
     }
 
     private static void onWorldFlushFailure(boolean protectedTargetBound) {
@@ -708,17 +765,61 @@ public final class ObsOverlayRuntime {
     }
 
     private static void markProtectionFailed(String logMessage, Throwable throwable) {
-        if (status == ObsOverlayHookStatus.FAILED) {
+        if (LIFECYCLE.state() == ObsOverlayLifecycleState.FAILED) {
             return;
         }
-        status = ObsOverlayHookStatus.FAILED;
-        failureDetail = safeMessage(throwable);
+        LIFECYCLE.fail(throwable);
         ECClientSettings.LOGGER.error(logMessage, throwable);
     }
 
     private static String safeMessage(Throwable throwable) {
         String message = throwable.getMessage();
         return message == null || message.isBlank() ? throwable.getClass().getSimpleName() : message;
+    }
+
+    private static final class RuntimeInstallation implements ObsOverlayInstallation {
+        private ObsOverlayRenderer ownedRenderer;
+        private ObsOverlayInstallation nativeInstallation;
+        private final boolean unsafeCaptureOrder;
+
+        private RuntimeInstallation(
+                ObsOverlayRenderer ownedRenderer,
+                ObsOverlayInstallation nativeInstallation
+        ) {
+            this.ownedRenderer = ownedRenderer;
+            this.nativeInstallation = nativeInstallation;
+            this.unsafeCaptureOrder = nativeInstallation.unsafeCaptureOrder();
+        }
+
+        @Override
+        public boolean unsafeCaptureOrder() {
+            return unsafeCaptureOrder;
+        }
+
+        @Override
+        public boolean isObsCaptureLoaded() {
+            ObsOverlayInstallation current = nativeInstallation;
+            return current != null && current.isObsCaptureLoaded();
+        }
+
+        @Override
+        public synchronized void uninstall() throws Exception {
+            ObsOverlayInstallation currentNative = nativeInstallation;
+            if (currentNative != null) {
+                currentNative.uninstall();
+                nativeInstallation = null;
+            }
+            ObsOverlayRenderer currentRenderer = ownedRenderer;
+            if (currentRenderer == null) {
+                return;
+            }
+            if (renderer == currentRenderer) {
+                renderer = null;
+            }
+            retryFailedWorldFlushes();
+            currentRenderer.close();
+            ownedRenderer = null;
+        }
     }
 
     private enum CaptureMode {

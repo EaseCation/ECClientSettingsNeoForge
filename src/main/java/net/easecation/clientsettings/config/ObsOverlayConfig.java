@@ -7,6 +7,7 @@ import net.easecation.clientsettings.feature.obsoverlay.ObsOverlaySettings;
 import net.easecation.clientsettings.feature.obsoverlay.PlayerAliasColorMode;
 import net.easecation.clientsettings.feature.obsoverlay.PlayerAliasFormat;
 import net.easecation.clientsettings.feature.obsoverlay.PlayerNameTagMode;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.EnumMap;
@@ -35,7 +36,7 @@ public final class ObsOverlayConfig {
     private static final ModConfigSpec.BooleanValue CUSTOM_HANDLED_SCREENS_ENABLED;
     private static final ModConfigSpec.ConfigValue<List<? extends String>> CUSTOM_HANDLED_SCREEN_IDS;
 
-    private static volatile ObsOverlaySettings current = ObsOverlaySettings.DEFAULT;
+    private static volatile ObsOverlaySettings current;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -98,14 +99,41 @@ public final class ObsOverlayConfig {
     }
 
     public static ObsOverlaySettings current() {
-        return current;
+        ObsOverlaySettings snapshot = current;
+        if (snapshot == null) {
+            throw new IllegalStateException("OBS overlay configuration has not been loaded");
+        }
+        return snapshot;
     }
 
-    public static void refresh() {
-        current = read();
+    public static boolean isLoaded() {
+        return current != null;
+    }
+
+    public static void onLoading(ModConfigEvent.Loading event) {
+        if (isTarget(event)) {
+            publishLoadedSnapshot();
+        }
+    }
+
+    public static void onReloading(ModConfigEvent.Reloading event) {
+        if (isTarget(event)) {
+            publishLoadedSnapshot();
+        }
+    }
+
+    public static void onUnloading(ModConfigEvent.Unloading event) {
+        if (!isTarget(event)) {
+            return;
+        }
+        current = null;
+        ObsOverlayRuntime.onConfigUnloaded();
     }
 
     public static void save(ObsOverlaySettings settings) {
+        if (current == null) {
+            throw new IllegalStateException("Cannot save OBS overlay configuration before it is loaded");
+        }
         ENABLED.set(settings.enabled());
         SHOW_TEST_MARKER.set(settings.showTestMarker());
         FAIL_CLOSED.set(settings.failClosed());
@@ -121,7 +149,18 @@ public final class ObsOverlayConfig {
         CUSTOM_HANDLED_SCREEN_IDS.set(settings.customHandledScreenIds());
         SPEC.save();
         current = settings;
-        ObsOverlayRuntime.onSettingsChanged(settings);
+        ObsOverlayRuntime.onConfigLoaded(settings);
+    }
+
+    private static boolean isTarget(ModConfigEvent event) {
+        return event.getConfig().getSpec() == SPEC
+                && FILE_NAME.equals(event.getConfig().getFileName());
+    }
+
+    private static void publishLoadedSnapshot() {
+        ObsOverlaySettings snapshot = read();
+        current = snapshot;
+        ObsOverlayRuntime.onConfigLoaded(snapshot);
     }
 
     private static ObsOverlaySettings read() {

@@ -17,7 +17,6 @@
     "GuiRendererMixin",
     "GuiRenderStateMixin",
     "MapRendererMixin",
-    "MinecraftMixin",
     "RenderSystemMixin",
     "ScreenMixin",
     "ViaBedrockDeferredNameTagMixin"

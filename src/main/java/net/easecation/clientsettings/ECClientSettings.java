@@ -39,6 +39,9 @@ public final class ECClientSettings {
         modEventBus.addListener(HudRenderer::register);
         modEventBus.addListener(ObsOverlayGuiLayer::register);
         modEventBus.addListener(BedrockBlockLodIntegration::onClientSetup);
+        modEventBus.addListener(ObsOverlayConfig::onLoading);
+        modEventBus.addListener(ObsOverlayConfig::onReloading);
+        modEventBus.addListener(ObsOverlayConfig::onUnloading);
 
         NeoForge.EVENT_BUS.addListener(ClientInputDispatcher::onClientTick);
         NeoForge.EVENT_BUS.addListener(TimeChangerRuntime::onClientTick);
@@ -60,6 +63,7 @@ public final class ECClientSettings {
         NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onModEvent);
         NeoForge.EVENT_BUS.addListener(WindowAppearanceEvents::onDisconnected);
         NeoForge.EVENT_BUS.addListener(ObsOverlayRuntime::onLoggingOut);
+        NeoForge.EVENT_BUS.addListener(ObsOverlayRuntime::onClientStarted);
         NeoForge.EVENT_BUS.addListener(ObsOverlayRuntime::onClientStopping);
         NeoForge.EVENT_BUS.addListener(InitialRenderDistanceController::onLoggingIn);
 
