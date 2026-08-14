@@ -108,6 +108,13 @@ final class ObsOverlayLifecycle {
         return installation != null && installation.isObsCaptureLoaded();
     }
 
+    boolean bindingReady() {
+        ObsOverlayInstallation current = installation;
+        return state == ObsOverlayLifecycleState.ACTIVE
+                && current != null
+                && current.bindingReady();
+    }
+
     void updateWindow(long glfwWindow) throws Exception {
         ObsOverlayInstallation current = installation;
         if (state == ObsOverlayLifecycleState.ACTIVE && current != null) {

@@ -177,6 +177,21 @@ class ObsOverlayLifecycleTest {
     }
 
     @Test
+    void activeHookIsNotProtectionReadyUntilItsWindowBindingIsVerified() {
+        FakeInstallation installed = new FakeInstallation(false, false);
+        installed.bindingReady = false;
+        ObsOverlayLifecycle lifecycle = new ObsOverlayLifecycle(() -> installed);
+
+        lifecycle.onConfigLoaded(true);
+        lifecycle.onClientStarted();
+        assertEquals(ObsOverlayLifecycleState.ACTIVE, lifecycle.state());
+        assertFalse(lifecycle.bindingReady());
+
+        installed.bindingReady = true;
+        assertTrue(lifecycle.bindingReady());
+    }
+
+    @Test
     void clientExitUninstallsExactlyOnce() {
         FakeInstallation installed = new FakeInstallation(false, true);
         ObsOverlayLifecycle lifecycle = new ObsOverlayLifecycle(() -> installed);
@@ -245,6 +260,7 @@ class ObsOverlayLifecycleTest {
         private final boolean obsCaptureLoaded;
         private final AtomicInteger uninstalls = new AtomicInteger();
         private final AtomicInteger windowUpdates = new AtomicInteger();
+        private boolean bindingReady = true;
         private boolean failUninstall;
         private Runnable beforeUninstall = () -> { };
 
@@ -261,6 +277,11 @@ class ObsOverlayLifecycleTest {
         @Override
         public boolean isObsCaptureLoaded() {
             return obsCaptureLoaded;
+        }
+
+        @Override
+        public boolean bindingReady() {
+            return bindingReady;
         }
 
         @Override

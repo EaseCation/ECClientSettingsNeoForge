@@ -529,7 +529,9 @@ public final class ObsOverlayRuntime {
         return switch (LIFECYCLE.state()) {
             case ACTIVE -> LIFECYCLE.unsafeCaptureOrder()
                     ? ObsOverlayHookStatus.UNSAFE_CAPTURE_ORDER
-                    : ObsOverlayHookStatus.READY;
+                    : LIFECYCLE.bindingReady()
+                            ? ObsOverlayHookStatus.READY
+                            : ObsOverlayHookStatus.NOT_INITIALIZED;
             case FAILED -> ObsOverlayHookStatus.FAILED;
             case DISABLED, UNINSTALLING -> ObsOverlayHookStatus.STOPPED;
             case WAITING_FOR_CONFIG, READY, INSTALLING -> ObsOverlayHookStatus.NOT_INITIALIZED;
@@ -547,6 +549,7 @@ public final class ObsOverlayRuntime {
 
     public static boolean protectionReady() {
         return LIFECYCLE.state() == ObsOverlayLifecycleState.ACTIVE
+                && LIFECYCLE.bindingReady()
                 && !LIFECYCLE.unsafeCaptureOrder()
                 && renderer != null;
     }
@@ -805,6 +808,12 @@ public final class ObsOverlayRuntime {
         public boolean isObsCaptureLoaded() {
             ObsOverlayInstallation current = nativeInstallation;
             return current != null && current.isObsCaptureLoaded();
+        }
+
+        @Override
+        public boolean bindingReady() {
+            ObsOverlayInstallation current = nativeInstallation;
+            return current != null && current.bindingReady();
         }
 
         @Override

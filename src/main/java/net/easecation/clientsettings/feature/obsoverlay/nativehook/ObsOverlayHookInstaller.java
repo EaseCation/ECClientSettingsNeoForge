@@ -21,15 +21,14 @@ public final class ObsOverlayHookInstaller implements ObsOverlayNativeInstaller 
             throw new IOException("Minecraft native window handle is unavailable");
         }
         ObsOverlayHook hook = ObsOverlayHook.install(targetWindowHandle, compositor, failureHandler);
-        return windowAware(hook, GLFWNativeWin32::glfwGetWin32Window, targetWindowHandle);
+        return windowAware(hook, GLFWNativeWin32::glfwGetWin32Window);
     }
 
     static ObsOverlayInstallation windowAware(
             ObsOverlayHook hook,
-            NativeWindowResolver windowResolver,
-            long initialWindowHandle
+            NativeWindowResolver windowResolver
     ) {
-        return new WindowAwareInstallation(hook, windowResolver, initialWindowHandle);
+        return new WindowAwareInstallation(hook, windowResolver);
     }
 
     @FunctionalInterface
@@ -40,16 +39,13 @@ public final class ObsOverlayHookInstaller implements ObsOverlayNativeInstaller 
     private static final class WindowAwareInstallation implements ObsOverlayInstallation {
         private final ObsOverlayHook hook;
         private final NativeWindowResolver windowResolver;
-        private long windowHandle;
 
         private WindowAwareInstallation(
                 ObsOverlayHook hook,
-                NativeWindowResolver windowResolver,
-                long initialWindowHandle
+                NativeWindowResolver windowResolver
         ) {
             this.hook = hook;
             this.windowResolver = windowResolver;
-            this.windowHandle = initialWindowHandle;
         }
 
         @Override
@@ -63,16 +59,18 @@ public final class ObsOverlayHookInstaller implements ObsOverlayNativeInstaller 
         }
 
         @Override
+        public boolean bindingReady() {
+            return hook.bindingReady();
+        }
+
+        @Override
         public void updateWindow(long currentGlfwWindow) throws IOException {
             long currentWindowHandle = windowResolver.windowHandle(currentGlfwWindow);
             if (currentWindowHandle == 0L) {
-                throw new IOException("Minecraft native window handle is unavailable");
-            }
-            if (currentWindowHandle == windowHandle) {
+                hook.invalidateTargetWindow();
                 return;
             }
             hook.refreshTargetWindow(currentWindowHandle);
-            windowHandle = currentWindowHandle;
         }
 
         @Override

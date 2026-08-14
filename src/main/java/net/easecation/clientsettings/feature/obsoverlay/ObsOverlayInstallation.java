@@ -6,6 +6,10 @@ public interface ObsOverlayInstallation {
 
     boolean isObsCaptureLoaded();
 
+    default boolean bindingReady() {
+        return true;
+    }
+
     default void updateWindow(long glfwWindow) throws Exception {
     }
 
