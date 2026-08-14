@@ -6,5 +6,8 @@ public interface ObsOverlayInstallation {
 
     boolean isObsCaptureLoaded();
 
+    default void updateWindow(long glfwWindow) throws Exception {
+    }
+
     void uninstall() throws Exception;
 }

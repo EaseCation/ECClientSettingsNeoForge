@@ -3,6 +3,7 @@ package net.easecation.clientsettings.feature.obsoverlay;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -64,6 +65,30 @@ class ObsOverlayLifecycleTest {
 
         assertEquals(ObsOverlayLifecycleState.DISABLED, lifecycle.state());
         assertEquals(0, installs.get());
+    }
+
+    @Test
+    void disabledOverlayNeverForwardsPerFrameWindowUpdatesToNativeCode() throws Exception {
+        FakeInstallation installed = new FakeInstallation(false, false);
+        ObsOverlayLifecycle lifecycle = new ObsOverlayLifecycle(() -> installed);
+        lifecycle.onClientStarted();
+        lifecycle.onConfigLoaded(false);
+
+        int frames = 1_000_000;
+        long started = System.nanoTime();
+        for (int frame = 0; frame < frames; frame++) {
+            lifecycle.updateWindow(100L);
+        }
+        long elapsed = System.nanoTime() - started;
+
+        assertEquals(0, installed.windowUpdates.get());
+        assertEquals(ObsOverlayLifecycleState.DISABLED, lifecycle.state());
+        System.out.printf(
+                Locale.ROOT,
+                "OBS_DISABLED_BENCHMARK frames=%d ns_per_frame=%.2f native_calls=0%n",
+                frames,
+                (double) elapsed / frames
+        );
     }
 
     @Test
@@ -219,6 +244,7 @@ class ObsOverlayLifecycleTest {
         private final boolean unsafeCaptureOrder;
         private final boolean obsCaptureLoaded;
         private final AtomicInteger uninstalls = new AtomicInteger();
+        private final AtomicInteger windowUpdates = new AtomicInteger();
         private boolean failUninstall;
         private Runnable beforeUninstall = () -> { };
 
@@ -235,6 +261,11 @@ class ObsOverlayLifecycleTest {
         @Override
         public boolean isObsCaptureLoaded() {
             return obsCaptureLoaded;
+        }
+
+        @Override
+        public void updateWindow(long glfwWindow) {
+            windowUpdates.incrementAndGet();
         }
 
         @Override

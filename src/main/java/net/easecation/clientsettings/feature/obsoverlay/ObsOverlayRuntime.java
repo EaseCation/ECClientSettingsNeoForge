@@ -462,10 +462,15 @@ public final class ObsOverlayRuntime {
         }
     }
 
-    public static boolean preparePublicFrameForCapture() {
+    public static boolean preparePublicFrameForCapture(long glfwWindow) {
         ObsOverlaySettings settings = ObsOverlayConfig.current();
         if (!settings.enabled()) {
             return true;
+        }
+        try {
+            LIFECYCLE.updateWindow(glfwWindow);
+        } catch (Exception | LinkageError exception) {
+            markProtectionFailed("Could not rebind OBS overlay to the current window", exception);
         }
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.getWindow().isMinimized()) {
@@ -800,6 +805,14 @@ public final class ObsOverlayRuntime {
         public boolean isObsCaptureLoaded() {
             ObsOverlayInstallation current = nativeInstallation;
             return current != null && current.isObsCaptureLoaded();
+        }
+
+        @Override
+        public void updateWindow(long glfwWindow) throws Exception {
+            ObsOverlayInstallation current = nativeInstallation;
+            if (current != null) {
+                current.updateWindow(glfwWindow);
+            }
         }
 
         @Override

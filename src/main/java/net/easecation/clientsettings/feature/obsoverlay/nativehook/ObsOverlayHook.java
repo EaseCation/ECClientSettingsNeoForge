@@ -1,6 +1,5 @@
 package net.easecation.clientsettings.feature.obsoverlay.nativehook;
 
-import com.sun.jna.Function;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.PointerByReference;
@@ -8,6 +7,7 @@ import net.easecation.clientsettings.ECClientSettings;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayInstallException;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayInstallation;
 import org.lwjgl.system.Callback;
+import org.lwjgl.system.JNI;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -104,6 +104,7 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
         );
         CallbackClosure callbackClosure;
         try {
+            callbackState.bindCurrentDeviceContext();
             callbackClosure = callbackFactory.create(callbackState::invoke);
         } catch (RuntimeException | LinkageError failure) {
             if (ownsInitialization) {
@@ -204,6 +205,10 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
         return callbackFreed;
     }
 
+    void updateTargetWindow(long targetWindowHandle) {
+        callbackState.updateTargetWindow(targetWindowHandle);
+    }
+
     private ObsOverlayInstallException rollbackInstall(String message) {
         return rollbackInstall(message, new IOException(message));
     }
@@ -243,10 +248,6 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
 
     private static IOException statusFailure(String operation, int status) {
         return new IOException("MinHook " + operation + " failed with status " + status);
-    }
-
-    static Function stdcallFunction(Pointer pointer) {
-        return Function.getFunction(pointer, Function.ALT_CONVENTION);
     }
 
     private static boolean isNull(Pointer pointer) {
@@ -293,11 +294,13 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
 
         long windowFromDeviceContext(long deviceContext);
 
+        long currentDeviceContext();
+
         OriginalSwapBuffers original(Pointer pointer);
     }
 
     private static final class CallbackState {
-        private final long targetWindowHandle;
+        private volatile WindowBinding target;
         private final Runnable compositor;
         private final Consumer<Throwable> failureHandler;
         private final NativePlatform platform;
@@ -311,7 +314,7 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
                 Consumer<Throwable> failureHandler,
                 NativePlatform platform
         ) {
-            this.targetWindowHandle = targetWindowHandle;
+            this.target = new WindowBinding(targetWindowHandle, 0L);
             this.compositor = compositor;
             this.failureHandler = failureHandler;
             this.platform = platform;
@@ -319,6 +322,23 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
 
         private void setOriginal(OriginalSwapBuffers original) {
             this.original = Objects.requireNonNull(original, "original");
+        }
+
+        private void bindCurrentDeviceContext() {
+            long deviceContext = platform.currentDeviceContext();
+            if (deviceContext != 0L
+                    && platform.windowFromDeviceContext(deviceContext) == target.windowHandle()) {
+                target = new WindowBinding(target.windowHandle(), deviceContext);
+            }
+        }
+
+        private void updateTargetWindow(long targetWindowHandle) {
+            if (targetWindowHandle == 0L) {
+                throw new IllegalArgumentException("targetWindowHandle must not be zero");
+            }
+            if (target.windowHandle() != targetWindowHandle) {
+                target = new WindowBinding(targetWindowHandle, 0L);
+            }
         }
 
         private int invoke(long deviceContext) {
@@ -340,8 +360,7 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
             }
             inCallback.set(true);
             try {
-                long window = platform.windowFromDeviceContext(deviceContext);
-                if (window != 0L && window == targetWindowHandle) {
+                if (isTargetDeviceContext(deviceContext)) {
                     compositor.run();
                 }
             } catch (Throwable throwable) {
@@ -354,6 +373,28 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
                 inCallback.remove();
             }
             return currentOriginal.invoke(deviceContext);
+        }
+
+        private boolean isTargetDeviceContext(long deviceContext) {
+            if (deviceContext == 0L) {
+                return false;
+            }
+            WindowBinding binding = target;
+            if (deviceContext == binding.deviceContext()) {
+                return target == binding;
+            }
+            long window = platform.windowFromDeviceContext(deviceContext);
+            if (window == 0L || window != binding.windowHandle()) {
+                return false;
+            }
+            if (target != binding) {
+                return false;
+            }
+            target = new WindowBinding(binding.windowHandle(), deviceContext);
+            return true;
+        }
+
+        private record WindowBinding(long windowHandle, long deviceContext) {
         }
 
         private synchronized void enterCallback() {
@@ -478,9 +519,18 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
         }
 
         @Override
+        public long currentDeviceContext() {
+            Pointer function = kernel32.GetProcAddress(kernel32.GetModuleHandleA("opengl32.dll"), "wglGetCurrentDC");
+            if (isNull(function)) {
+                return 0L;
+            }
+            return JNI.invokeP(Pointer.nativeValue(function));
+        }
+
+        @Override
         public OriginalSwapBuffers original(Pointer pointer) {
-            Function function = stdcallFunction(pointer);
-            return deviceContext -> function.invokeInt(new Object[]{new Pointer(deviceContext)});
+            long address = Pointer.nativeValue(pointer);
+            return deviceContext -> JNI.invokePI(deviceContext, address);
         }
     }
 }

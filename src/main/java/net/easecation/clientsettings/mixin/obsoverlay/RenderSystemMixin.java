@@ -22,7 +22,7 @@ abstract class RenderSystemMixin {
             long window,
             Operation<Void> original
     ) {
-        if (ObsOverlayRuntime.preparePublicFrameForCapture()) {
+        if (ObsOverlayRuntime.preparePublicFrameForCapture(window)) {
             original.call(window);
         }
     }
