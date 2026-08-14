@@ -47,8 +47,7 @@ class ObsOverlayHookTest {
     @Test
     void realSwapTrampolineUsesLwjglJniInsteadOfJnaDispatch() throws Exception {
         String classFile;
-        try (var input = ObsOverlayHook.class.getResourceAsStream("/" + ObsOverlayHook.class.getName()
-                .replace('.', '/') + ".class")) {
+        try (var input = ObsOverlayHook.class.getResourceAsStream("ObsOverlayHook$JnaNativePlatform.class")) {
             classFile = new String(input.readAllBytes(), StandardCharsets.ISO_8859_1);
         }
 
