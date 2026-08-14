@@ -36,9 +36,24 @@ class ObsOverlayLifecycleStructureTest {
         assertTrue(providerClass.contains("ObsOverlayNativeProvider$Holder"));
     }
 
+    @Test
+    void renderSwapScopeArmsAndDisarmsAroundTheOriginalCall() throws IOException {
+        String classFile = classBytes(
+                "/net/easecation/clientsettings/mixin/obsoverlay/RenderSystemMixin.class"
+        );
+
+        assertTrue(classFile.contains("armTargetSwap"));
+        assertTrue(classFile.contains("disarmTargetSwap"));
+        assertTrue(classFile.contains("preparePublicFrameForCapture"));
+    }
+
     private static String classBytes(Class<?> type) throws IOException {
         String resource = "/" + type.getName().replace('.', '/') + ".class";
-        try (InputStream input = type.getResourceAsStream(resource)) {
+        return classBytes(resource);
+    }
+
+    private static String classBytes(String resource) throws IOException {
+        try (InputStream input = ObsOverlayLifecycleStructureTest.class.getResourceAsStream(resource)) {
             if (input == null) {
                 throw new IOException("Missing class resource " + resource);
             }

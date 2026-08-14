@@ -94,7 +94,6 @@ public final class ObsOverlayRuntime {
         renderer = installingRenderer;
         try {
             ObsOverlayInstallation nativeInstallation = ObsOverlayNativeProvider.install(
-                    currentClient.getWindow().getWindow(),
                     ObsOverlayRuntime::compositeAfterCapture,
                     ObsOverlayRuntime::onCompositorFailure
             );
@@ -462,15 +461,10 @@ public final class ObsOverlayRuntime {
         }
     }
 
-    public static boolean preparePublicFrameForCapture(long glfwWindow) {
+    public static boolean preparePublicFrameForCapture() {
         ObsOverlaySettings settings = ObsOverlayConfig.current();
         if (!settings.enabled()) {
             return true;
-        }
-        try {
-            LIFECYCLE.updateWindow(glfwWindow);
-        } catch (Exception | LinkageError exception) {
-            markProtectionFailed("Could not rebind OBS overlay to the current window", exception);
         }
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.getWindow().isMinimized()) {
@@ -497,6 +491,10 @@ public final class ObsOverlayRuntime {
             markProtectionFailed("Could not prepare a fail-closed OBS capture frame", exception);
             return false;
         }
+    }
+
+    public static ObsOverlayInstallation armTargetSwap() {
+        return LIFECYCLE.armTargetSwap();
     }
 
     private static void compositeAfterCapture() {
@@ -529,9 +527,7 @@ public final class ObsOverlayRuntime {
         return switch (LIFECYCLE.state()) {
             case ACTIVE -> LIFECYCLE.unsafeCaptureOrder()
                     ? ObsOverlayHookStatus.UNSAFE_CAPTURE_ORDER
-                    : LIFECYCLE.bindingReady()
-                            ? ObsOverlayHookStatus.READY
-                            : ObsOverlayHookStatus.NOT_INITIALIZED;
+                    : ObsOverlayHookStatus.READY;
             case FAILED -> ObsOverlayHookStatus.FAILED;
             case DISABLED, UNINSTALLING -> ObsOverlayHookStatus.STOPPED;
             case WAITING_FOR_CONFIG, READY, INSTALLING -> ObsOverlayHookStatus.NOT_INITIALIZED;
@@ -549,7 +545,6 @@ public final class ObsOverlayRuntime {
 
     public static boolean protectionReady() {
         return LIFECYCLE.state() == ObsOverlayLifecycleState.ACTIVE
-                && LIFECYCLE.bindingReady()
                 && !LIFECYCLE.unsafeCaptureOrder()
                 && renderer != null;
     }
@@ -811,16 +806,16 @@ public final class ObsOverlayRuntime {
         }
 
         @Override
-        public boolean bindingReady() {
+        public ObsOverlayInstallation armTargetSwap() {
             ObsOverlayInstallation current = nativeInstallation;
-            return current != null && current.bindingReady();
+            return current == null ? null : current.armTargetSwap();
         }
 
         @Override
-        public void updateWindow(long glfwWindow) throws Exception {
+        public void disarmTargetSwap() {
             ObsOverlayInstallation current = nativeInstallation;
             if (current != null) {
-                current.updateWindow(glfwWindow);
+                current.disarmTargetSwap();
             }
         }
 

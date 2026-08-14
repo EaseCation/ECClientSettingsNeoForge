@@ -8,11 +8,10 @@ final class ObsOverlayNativeProvider {
     }
 
     static ObsOverlayInstallation install(
-            long glfwWindow,
             Runnable compositor,
             Consumer<Throwable> failureHandler
     ) throws Exception {
-        return Holder.INSTALLER.install(glfwWindow, compositor, failureHandler);
+        return Holder.INSTALLER.install(compositor, failureHandler);
     }
 
     private static final class Holder {

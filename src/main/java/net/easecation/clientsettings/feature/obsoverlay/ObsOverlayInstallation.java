@@ -6,11 +6,11 @@ public interface ObsOverlayInstallation {
 
     boolean isObsCaptureLoaded();
 
-    default boolean bindingReady() {
-        return true;
+    default ObsOverlayInstallation armTargetSwap() {
+        return null;
     }
 
-    default void updateWindow(long glfwWindow) throws Exception {
+    default void disarmTargetSwap() {
     }
 
     void uninstall() throws Exception;

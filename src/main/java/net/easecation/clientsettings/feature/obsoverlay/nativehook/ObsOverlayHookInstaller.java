@@ -2,80 +2,17 @@ package net.easecation.clientsettings.feature.obsoverlay.nativehook;
 
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayInstallation;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayNativeInstaller;
-import org.lwjgl.glfw.GLFWNativeWin32;
 
-import java.io.IOException;
 import java.util.function.Consumer;
 
 public final class ObsOverlayHookInstaller implements ObsOverlayNativeInstaller {
 
     @Override
     public ObsOverlayInstallation install(
-            long glfwWindow,
             Runnable compositor,
             Consumer<Throwable> failureHandler
     ) throws Exception {
         ObsOverlayHook.requireSupportedPlatform();
-        long targetWindowHandle = GLFWNativeWin32.glfwGetWin32Window(glfwWindow);
-        if (targetWindowHandle == 0L) {
-            throw new IOException("Minecraft native window handle is unavailable");
-        }
-        ObsOverlayHook hook = ObsOverlayHook.install(targetWindowHandle, compositor, failureHandler);
-        return windowAware(hook, GLFWNativeWin32::glfwGetWin32Window);
-    }
-
-    static ObsOverlayInstallation windowAware(
-            ObsOverlayHook hook,
-            NativeWindowResolver windowResolver
-    ) {
-        return new WindowAwareInstallation(hook, windowResolver);
-    }
-
-    @FunctionalInterface
-    interface NativeWindowResolver {
-        long windowHandle(long glfwWindow);
-    }
-
-    private static final class WindowAwareInstallation implements ObsOverlayInstallation {
-        private final ObsOverlayHook hook;
-        private final NativeWindowResolver windowResolver;
-
-        private WindowAwareInstallation(
-                ObsOverlayHook hook,
-                NativeWindowResolver windowResolver
-        ) {
-            this.hook = hook;
-            this.windowResolver = windowResolver;
-        }
-
-        @Override
-        public boolean unsafeCaptureOrder() {
-            return hook.unsafeCaptureOrder();
-        }
-
-        @Override
-        public boolean isObsCaptureLoaded() {
-            return hook.isObsCaptureLoaded();
-        }
-
-        @Override
-        public boolean bindingReady() {
-            return hook.bindingReady();
-        }
-
-        @Override
-        public void updateWindow(long currentGlfwWindow) throws IOException {
-            long currentWindowHandle = windowResolver.windowHandle(currentGlfwWindow);
-            if (currentWindowHandle == 0L) {
-                hook.invalidateTargetWindow();
-                return;
-            }
-            hook.refreshTargetWindow(currentWindowHandle);
-        }
-
-        @Override
-        public void uninstall() throws Exception {
-            hook.uninstall();
-        }
+        return ObsOverlayHook.install(compositor, failureHandler);
     }
 }

@@ -15,7 +15,6 @@ import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -54,7 +53,6 @@ class ObsOverlayHookTest {
 
         assertTrue(classFile.contains("org/lwjgl/system/JNI"));
         assertTrue(classFile.contains("callPI"));
-        assertTrue(classFile.contains("callP"));
         assertFalse(classFile.contains("invokePI"));
         assertFalse(classFile.contains("invokeP"));
         assertFalse(classFile.contains("com/sun/jna/Function"));
@@ -67,12 +65,13 @@ class ObsOverlayHookTest {
         AtomicInteger composites = new AtomicInteger();
         ObsOverlayHook hook = install(platform, closure, composites);
 
+        assertEquals(hook, hook.armTargetSwap());
         int result = closure.callback.invoke(77L);
+        hook.disarmTargetSwap();
 
         assertEquals(1234, result);
         assertEquals(1, composites.get());
         assertEquals(1, platform.originalCalls.get());
-        assertEquals(1, platform.windowFromDcCalls.get());
         hook.uninstall();
         assertEquals(
                 List.of("initialize", "create", "enable", "disable", "remove", "freeCallback", "uninitialize"),
@@ -81,259 +80,105 @@ class ObsOverlayHookTest {
     }
 
     @Test
-    void stableTargetDeviceContextAvoidsPerFrameWindowLookup() throws Exception {
+    void unarmedSwapAlwaysBypassesCompositor() throws Exception {
         FakePlatform platform = new FakePlatform();
-        platform.currentDeviceContext = 77L;
         FakeClosure closure = new FakeClosure(platform.operations);
         AtomicInteger composites = new AtomicInteger();
         ObsOverlayHook hook = install(platform, closure, composites);
 
         for (int frame = 0; frame < 10_000; frame++) {
-            assertEquals(1234, closure.callback.invoke(77L));
+            assertEquals(1234, closure.callback.invoke(frame + 1L));
         }
 
-        assertEquals(10_000, composites.get());
+        assertEquals(0, composites.get());
         assertEquals(10_000, platform.originalCalls.get());
-        assertEquals(1, platform.windowFromDcCalls.get());
         hook.uninstall();
     }
 
     @Test
-    void reportsSteadyStateCallbackMicrobenchmark() throws Exception {
+    void reportsArmedTargetSwapMicrobenchmark() throws Exception {
         FakePlatform platform = new FakePlatform();
-        platform.currentDeviceContext = 77L;
         FakeClosure closure = new FakeClosure(platform.operations);
         ObsOverlayHook hook = install(platform, closure, new AtomicInteger());
-        AtomicInteger windowResolverCalls = new AtomicInteger();
-        var installation = ObsOverlayHookInstaller.windowAware(
-                hook,
-                ignored -> {
-                    windowResolverCalls.incrementAndGet();
-                    return 42L;
-                }
-        );
         int warmupFrames = 50_000;
         int measuredFrames = 1_000_000;
         for (int frame = 0; frame < warmupFrames; frame++) {
-            installation.updateWindow(100L);
+            assertEquals(hook, hook.armTargetSwap());
             closure.callback.invoke(77L);
+            hook.disarmTargetSwap();
         }
 
         long started = System.nanoTime();
         for (int frame = 0; frame < measuredFrames; frame++) {
-            installation.updateWindow(100L);
+            assertEquals(hook, hook.armTargetSwap());
             closure.callback.invoke(77L);
+            hook.disarmTargetSwap();
         }
         long elapsed = System.nanoTime() - started;
 
         System.out.printf(
                 Locale.ROOT,
-                "OBS_HOOK_BENCHMARK frames=%d ns_per_frame=%.2f window_resolver_calls=%d current_dc_calls=%d current_context_calls=%d window_from_dc_calls=%d original_calls=%d%n",
+                "OBS_HOOK_BENCHMARK frames=%d ns_per_frame=%.2f native_queries=0 original_calls=%d%n",
                 measuredFrames,
                 (double) elapsed / measuredFrames,
-                windowResolverCalls.get(),
-                platform.currentDcCalls.get(),
-                platform.currentContextCalls.get(),
-                platform.windowFromDcCalls.get(),
                 platform.originalCalls.get()
         );
-        assertEquals(1, platform.windowFromDcCalls.get());
-        assertEquals(warmupFrames + measuredFrames, windowResolverCalls.get());
-        assertEquals(1, platform.currentDcCalls.get());
-        assertEquals(1L + warmupFrames + measuredFrames, platform.currentContextCalls.get());
         assertEquals(warmupFrames + measuredFrames, platform.originalCalls.get());
-        installation.uninstall();
+        hook.uninstall();
     }
 
     @Test
-    void contextGenerationChangeInvalidatesAndRebindsSameWindow() throws Exception {
+    void armedSwapIsConsumedExactlyOnce() throws Exception {
         FakePlatform platform = new FakePlatform();
-        platform.currentDeviceContext = 77L;
         FakeClosure closure = new FakeClosure(platform.operations);
         AtomicInteger composites = new AtomicInteger();
         ObsOverlayHook hook = install(platform, closure, composites);
 
-        platform.currentOpenGlContext = 800L;
+        assertEquals(hook, hook.armTargetSwap());
         closure.callback.invoke(77L);
-        assertFalse(hook.bindingReady());
+        closure.callback.invoke(88L);
 
-        hook.refreshTargetWindow(42L);
-        closure.callback.invoke(77L);
-
-        assertTrue(hook.bindingReady());
         assertEquals(1, composites.get());
-        assertEquals(2, platform.windowFromDcCalls.get());
         assertEquals(2, platform.originalCalls.get());
+        hook.disarmTargetSwap();
         hook.uninstall();
     }
 
     @Test
-    void repeatedForeignContextNeverLooksUpWindowOrComposites() throws Exception {
+    void nestedArmFailsBeforeItCanStealOuterToken() throws Exception {
         FakePlatform platform = new FakePlatform();
-        platform.windowsByDeviceContext.put(88L, 99L);
         FakeClosure closure = new FakeClosure(platform.operations);
         AtomicInteger composites = new AtomicInteger();
         ObsOverlayHook hook = install(platform, closure, composites);
 
-        for (int frame = 0; frame < 10_000; frame++) {
-            assertEquals(1234, closure.callback.invoke(88L));
-        }
+        assertEquals(hook, hook.armTargetSwap());
+        assertThrows(IllegalStateException.class, hook::armTargetSwap);
+        closure.callback.invoke(77L);
+        hook.disarmTargetSwap();
 
-        assertEquals(0, composites.get());
-        assertEquals(10_000, platform.originalCalls.get());
-        assertEquals(1, platform.windowFromDcCalls.get());
-        assertEquals(1, platform.currentContextCalls.get());
+        assertEquals(1, composites.get());
+        assertEquals(1, platform.originalCalls.get());
         hook.uninstall();
     }
 
     @Test
-    void windowRebindInvalidatesCachedDeviceContext() throws Exception {
-        FakePlatform platform = new FakePlatform();
-        platform.currentDeviceContext = 77L;
-        FakeClosure closure = new FakeClosure(platform.operations);
-        AtomicInteger composites = new AtomicInteger();
-        ObsOverlayHook hook = install(platform, closure, composites);
-        platform.windowsByDeviceContext.put(88L, 84L);
-
-        platform.currentDeviceContext = 88L;
-        hook.refreshTargetWindow(84L);
-        closure.callback.invoke(77L);
-        closure.callback.invoke(88L);
-        closure.callback.invoke(88L);
-
-        assertEquals(2, composites.get());
-        assertEquals(2, platform.windowFromDcCalls.get());
-        assertEquals(3, platform.originalCalls.get());
-        hook.uninstall();
-    }
-
-    @Test
-    void sameGlfwAddressStillRefreshesRecreatedNativeWindow() throws Exception {
+    void targetTokenIsThreadLocal() throws Exception {
         FakePlatform platform = new FakePlatform();
         FakeClosure closure = new FakeClosure(platform.operations);
         AtomicInteger composites = new AtomicInteger();
         ObsOverlayHook hook = install(platform, closure, composites);
-        AtomicLong nativeWindow = new AtomicLong(42L);
-        var installation = ObsOverlayHookInstaller.windowAware(
-                hook,
-                ignored -> nativeWindow.get()
-        );
-
-        installation.updateWindow(100L);
-        closure.callback.invoke(77L);
-        nativeWindow.set(84L);
-        platform.currentDeviceContext = 88L;
-        platform.windowsByDeviceContext.put(88L, 84L);
-        installation.updateWindow(100L);
-        closure.callback.invoke(77L);
-        closure.callback.invoke(88L);
-
-        assertEquals(2, composites.get());
-        assertEquals(3, platform.originalCalls.get());
-        assertEquals(2, platform.windowFromDcCalls.get());
-        installation.uninstall();
-    }
-
-    @Test
-    void recreatedWindowRejectsForeignDeviceContextThenRetriesSameHandle() throws Exception {
-        FakePlatform platform = new FakePlatform();
-        FakeClosure closure = new FakeClosure(platform.operations);
-        AtomicInteger composites = new AtomicInteger();
-        ObsOverlayHook hook = install(platform, closure, composites);
-        AtomicLong nativeWindow = new AtomicLong(42L);
-        var installation = ObsOverlayHookInstaller.windowAware(hook, ignored -> nativeWindow.get());
-
-        nativeWindow.set(84L);
-        platform.currentDeviceContext = 88L;
-        platform.windowsByDeviceContext.put(88L, 99L);
-        installation.updateWindow(100L);
-        closure.callback.invoke(88L);
-
-        assertFalse(installation.bindingReady());
+        assertEquals(hook, hook.armTargetSwap());
+        Thread foreign = new Thread(() -> closure.callback.invoke(88L));
+        foreign.start();
+        foreign.join(2_000L);
+        assertFalse(foreign.isAlive());
         assertEquals(0, composites.get());
 
-        platform.windowsByDeviceContext.put(88L, 84L);
-        installation.updateWindow(100L);
-        closure.callback.invoke(88L);
-
-        assertTrue(installation.bindingReady());
+        closure.callback.invoke(77L);
         assertEquals(1, composites.get());
         assertEquals(2, platform.originalCalls.get());
-        assertEquals(3, platform.windowFromDcCalls.get());
-        installation.uninstall();
-    }
-
-    @Test
-    void unavailableInitialDeviceContextRetriesWithoutWindowChange() throws Exception {
-        FakePlatform platform = new FakePlatform();
-        platform.currentDeviceContext = 0L;
-        FakeClosure closure = new FakeClosure(platform.operations);
-        AtomicInteger composites = new AtomicInteger();
-        ObsOverlayHook hook = install(platform, closure, composites);
-        var installation = ObsOverlayHookInstaller.windowAware(hook, ignored -> 42L);
-
-        assertFalse(installation.bindingReady());
-        installation.updateWindow(100L);
-        assertFalse(installation.bindingReady());
-
-        platform.currentDeviceContext = 77L;
-        installation.updateWindow(100L);
-        closure.callback.invoke(77L);
-
-        assertTrue(installation.bindingReady());
-        assertEquals(1, composites.get());
-        assertEquals(3, platform.currentDcCalls.get());
-        assertEquals(1, platform.windowFromDcCalls.get());
-        installation.uninstall();
-    }
-
-    @Test
-    void mismatchedDeviceContextRemainsUnboundUntilOwnershipIsVerified() throws Exception {
-        FakePlatform platform = new FakePlatform();
-        platform.windowsByDeviceContext.put(77L, 99L);
-        FakeClosure closure = new FakeClosure(platform.operations);
-        AtomicInteger composites = new AtomicInteger();
-        ObsOverlayHook hook = install(platform, closure, composites);
-        var installation = ObsOverlayHookInstaller.windowAware(hook, ignored -> 42L);
-
-        assertFalse(installation.bindingReady());
-        closure.callback.invoke(77L);
-        installation.updateWindow(100L);
-        assertFalse(installation.bindingReady());
-
-        platform.windowsByDeviceContext.put(77L, 42L);
-        installation.updateWindow(100L);
-        closure.callback.invoke(77L);
-
-        assertTrue(installation.bindingReady());
-        assertEquals(1, composites.get());
-        assertEquals(2, platform.originalCalls.get());
-        assertEquals(3, platform.windowFromDcCalls.get());
-        installation.uninstall();
-    }
-
-    @Test
-    void disappearingWindowInvalidatesBindingAndRetriesWhenItReturns() throws Exception {
-        FakePlatform platform = new FakePlatform();
-        FakeClosure closure = new FakeClosure(platform.operations);
-        AtomicInteger composites = new AtomicInteger();
-        ObsOverlayHook hook = install(platform, closure, composites);
-        AtomicLong nativeWindow = new AtomicLong(42L);
-        var installation = ObsOverlayHookInstaller.windowAware(hook, ignored -> nativeWindow.get());
-
-        nativeWindow.set(0L);
-        installation.updateWindow(100L);
-        closure.callback.invoke(77L);
-        assertFalse(installation.bindingReady());
-
-        nativeWindow.set(42L);
-        installation.updateWindow(100L);
-        closure.callback.invoke(77L);
-
-        assertTrue(installation.bindingReady());
-        assertEquals(1, composites.get());
-        assertEquals(2, platform.originalCalls.get());
-        installation.uninstall();
+        hook.disarmTargetSwap();
+        hook.uninstall();
     }
 
     @Test
@@ -342,7 +187,6 @@ class ObsOverlayHookTest {
         FakeClosure closure = new FakeClosure(platform.operations);
         AtomicInteger failures = new AtomicInteger();
         ObsOverlayHook hook = ObsOverlayHook.install(
-                42L,
                 () -> { throw new IllegalStateException("composite failed"); },
                 throwable -> failures.incrementAndGet(),
                 platform,
@@ -352,25 +196,27 @@ class ObsOverlayHookTest {
                 }
         );
 
+        assertEquals(hook, hook.armTargetSwap());
         assertEquals(1234, closure.callback.invoke(77L));
+        hook.disarmTargetSwap();
         assertEquals(1, failures.get());
         assertEquals(1, platform.originalCalls.get());
         hook.uninstall();
     }
 
     @Test
-    void unavailableCurrentDeviceContextFailsClosedAndStillSwaps() throws Exception {
+    void disarmClearsTokenWhenNativeCallbackDidNotRun() throws Exception {
         FakePlatform platform = new FakePlatform();
-        platform.currentDeviceContext = 0L;
         FakeClosure closure = new FakeClosure(platform.operations);
         AtomicInteger composites = new AtomicInteger();
         ObsOverlayHook hook = install(platform, closure, composites);
 
+        assertEquals(hook, hook.armTargetSwap());
+        hook.disarmTargetSwap();
         assertEquals(1234, closure.callback.invoke(77L));
 
         assertEquals(0, composites.get());
         assertEquals(1, platform.originalCalls.get());
-        assertEquals(0, platform.windowFromDcCalls.get());
         hook.uninstall();
     }
 
@@ -381,7 +227,6 @@ class ObsOverlayHookTest {
         AtomicBoolean recurse = new AtomicBoolean(true);
         AtomicInteger composites = new AtomicInteger();
         ObsOverlayHook hook = ObsOverlayHook.install(
-                42L,
                 () -> {
                     composites.incrementAndGet();
                     if (recurse.getAndSet(false)) {
@@ -396,7 +241,9 @@ class ObsOverlayHookTest {
                 }
         );
 
+        assertEquals(hook, hook.armTargetSwap());
         assertEquals(1234, closure.callback.invoke(77L));
+        hook.disarmTargetSwap();
         assertEquals(1, composites.get());
         assertEquals(2, platform.originalCalls.get());
         hook.uninstall();
@@ -471,7 +318,6 @@ class ObsOverlayHookTest {
         CountDownLatch callbackEntered = new CountDownLatch(1);
         CountDownLatch releaseCallback = new CountDownLatch(1);
         ObsOverlayHook hook = ObsOverlayHook.install(
-                42L,
                 () -> {
                     callbackEntered.countDown();
                     try {
@@ -492,9 +338,12 @@ class ObsOverlayHookTest {
         AtomicReference<Throwable> uninstallFailure = new AtomicReference<>();
         Thread callbackThread = new Thread(() -> {
             try {
+                assertEquals(hook, hook.armTargetSwap());
                 closure.callback.invoke(77L);
             } catch (Throwable throwable) {
                 callbackFailure.set(throwable);
+            } finally {
+                hook.disarmTargetSwap();
             }
         });
         callbackThread.start();
@@ -557,7 +406,6 @@ class ObsOverlayHookTest {
             AtomicInteger composites
     ) throws Exception {
         return ObsOverlayHook.install(
-                42L,
                 composites::incrementAndGet,
                 throwable -> { },
                 platform,
@@ -592,10 +440,6 @@ class ObsOverlayHookTest {
     private static final class FakePlatform implements ObsOverlayHook.NativePlatform {
         private final List<String> operations = new ArrayList<>();
         private final AtomicInteger originalCalls = new AtomicInteger();
-        private final AtomicInteger currentDcCalls = new AtomicInteger();
-        private final AtomicInteger currentContextCalls = new AtomicInteger();
-        private final AtomicInteger windowFromDcCalls = new AtomicInteger();
-        private final java.util.Map<Long, Long> windowsByDeviceContext = new java.util.HashMap<>();
         private final CountDownLatch disabled = new CountDownLatch(1);
         private int initializeStatus = ObsOverlayHook.MH_OK;
         private int createStatus = ObsOverlayHook.MH_OK;
@@ -604,14 +448,6 @@ class ObsOverlayHookTest {
         private int removeStatus = ObsOverlayHook.MH_OK;
         private int uninitializeStatus = ObsOverlayHook.MH_OK;
         private boolean obsLoaded;
-        private long currentDeviceContext;
-        private long currentOpenGlContext;
-
-        private FakePlatform() {
-            windowsByDeviceContext.put(77L, 42L);
-            currentDeviceContext = 77L;
-            currentOpenGlContext = 700L;
-        }
 
         @Override
         public boolean isObsCaptureLoaded() {
@@ -661,24 +497,6 @@ class ObsOverlayHookTest {
         public int uninitialize() {
             operations.add("uninitialize");
             return uninitializeStatus;
-        }
-
-        @Override
-        public long windowFromDeviceContext(long deviceContext) {
-            windowFromDcCalls.incrementAndGet();
-            return windowsByDeviceContext.getOrDefault(deviceContext, 42L);
-        }
-
-        @Override
-        public long currentDeviceContext() {
-            currentDcCalls.incrementAndGet();
-            return currentDeviceContext;
-        }
-
-        @Override
-        public long currentOpenGlContext() {
-            currentContextCalls.incrementAndGet();
-            return currentOpenGlContext;
         }
 
         @Override

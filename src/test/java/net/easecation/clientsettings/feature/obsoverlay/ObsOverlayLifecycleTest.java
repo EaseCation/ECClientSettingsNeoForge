@@ -68,7 +68,7 @@ class ObsOverlayLifecycleTest {
     }
 
     @Test
-    void disabledOverlayNeverForwardsPerFrameWindowUpdatesToNativeCode() throws Exception {
+    void disabledOverlayNeverArmsNativeTargetSwap() {
         FakeInstallation installed = new FakeInstallation(false, false);
         ObsOverlayLifecycle lifecycle = new ObsOverlayLifecycle(() -> installed);
         lifecycle.onClientStarted();
@@ -77,11 +77,11 @@ class ObsOverlayLifecycleTest {
         int frames = 1_000_000;
         long started = System.nanoTime();
         for (int frame = 0; frame < frames; frame++) {
-            lifecycle.updateWindow(100L);
+            assertNull(lifecycle.armTargetSwap());
         }
         long elapsed = System.nanoTime() - started;
 
-        assertEquals(0, installed.windowUpdates.get());
+        assertEquals(0, installed.targetSwapArms.get());
         assertEquals(ObsOverlayLifecycleState.DISABLED, lifecycle.state());
         System.out.printf(
                 Locale.ROOT,
@@ -177,18 +177,34 @@ class ObsOverlayLifecycleTest {
     }
 
     @Test
-    void activeHookIsNotProtectionReadyUntilItsWindowBindingIsVerified() {
+    void activeHookForwardsTargetSwapScope() {
         FakeInstallation installed = new FakeInstallation(false, false);
-        installed.bindingReady = false;
         ObsOverlayLifecycle lifecycle = new ObsOverlayLifecycle(() -> installed);
 
         lifecycle.onConfigLoaded(true);
         lifecycle.onClientStarted();
         assertEquals(ObsOverlayLifecycleState.ACTIVE, lifecycle.state());
-        assertFalse(lifecycle.bindingReady());
+        ObsOverlayInstallation armed = lifecycle.armTargetSwap();
+        assertEquals(installed, armed);
+        armed.disarmTargetSwap();
+        assertEquals(1, installed.targetSwapArms.get());
+        assertEquals(1, installed.targetSwapDisarms.get());
+    }
 
-        installed.bindingReady = true;
-        assertTrue(lifecycle.bindingReady());
+    @Test
+    void armedScopeRetainsItsOwnerAcrossLifecycleUninstall() {
+        FakeInstallation installed = new FakeInstallation(false, false);
+        ObsOverlayLifecycle lifecycle = new ObsOverlayLifecycle(() -> installed);
+        lifecycle.onConfigLoaded(true);
+        lifecycle.onClientStarted();
+
+        ObsOverlayInstallation armed = lifecycle.armTargetSwap();
+        lifecycle.onConfigLoaded(false);
+        armed.disarmTargetSwap();
+
+        assertEquals(ObsOverlayLifecycleState.DISABLED, lifecycle.state());
+        assertEquals(1, installed.uninstalls.get());
+        assertEquals(1, installed.targetSwapDisarms.get());
     }
 
     @Test
@@ -259,8 +275,8 @@ class ObsOverlayLifecycleTest {
         private final boolean unsafeCaptureOrder;
         private final boolean obsCaptureLoaded;
         private final AtomicInteger uninstalls = new AtomicInteger();
-        private final AtomicInteger windowUpdates = new AtomicInteger();
-        private boolean bindingReady = true;
+        private final AtomicInteger targetSwapArms = new AtomicInteger();
+        private final AtomicInteger targetSwapDisarms = new AtomicInteger();
         private boolean failUninstall;
         private Runnable beforeUninstall = () -> { };
 
@@ -280,13 +296,14 @@ class ObsOverlayLifecycleTest {
         }
 
         @Override
-        public boolean bindingReady() {
-            return bindingReady;
+        public ObsOverlayInstallation armTargetSwap() {
+            targetSwapArms.incrementAndGet();
+            return this;
         }
 
         @Override
-        public void updateWindow(long glfwWindow) {
-            windowUpdates.incrementAndGet();
+        public void disarmTargetSwap() {
+            targetSwapDisarms.incrementAndGet();
         }
 
         @Override

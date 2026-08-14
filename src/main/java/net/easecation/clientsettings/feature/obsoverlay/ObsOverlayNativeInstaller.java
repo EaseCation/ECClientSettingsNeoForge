@@ -6,7 +6,6 @@ import java.util.function.Consumer;
 public interface ObsOverlayNativeInstaller {
 
     ObsOverlayInstallation install(
-            long glfwWindow,
             Runnable compositor,
             Consumer<Throwable> failureHandler
     ) throws Exception;

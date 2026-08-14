@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /**
@@ -58,12 +57,10 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
     }
 
     static ObsOverlayHook install(
-            long targetWindowHandle,
             Runnable compositor,
             Consumer<Throwable> failureHandler
     ) throws Exception {
         return install(
-                targetWindowHandle,
                 compositor,
                 failureHandler,
                 JnaNativePlatform.create(),
@@ -72,7 +69,6 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
     }
 
     static ObsOverlayHook install(
-            long targetWindowHandle,
             Runnable compositor,
             Consumer<Throwable> failureHandler,
             NativePlatform platform,
@@ -82,10 +78,6 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
         Objects.requireNonNull(failureHandler, "failureHandler");
         Objects.requireNonNull(platform, "platform");
         Objects.requireNonNull(callbackFactory, "callbackFactory");
-        if (targetWindowHandle == 0L) {
-            throw new IOException("Minecraft native window handle is unavailable");
-        }
-
         boolean obsAlreadyLoaded = platform.isObsCaptureLoaded();
         Pointer swapBuffers = platform.swapBuffers();
         if (isNull(swapBuffers)) {
@@ -98,14 +90,11 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
         }
         boolean ownsInitialization = initializeStatus == MH_OK;
         CallbackState callbackState = new CallbackState(
-                targetWindowHandle,
                 compositor,
-                failureHandler,
-                platform
+                failureHandler
         );
         CallbackClosure callbackClosure;
         try {
-            callbackState.refreshTargetWindow(targetWindowHandle);
             callbackClosure = callbackFactory.create(callbackState::invoke);
         } catch (RuntimeException | LinkageError failure) {
             if (ownsInitialization) {
@@ -169,8 +158,14 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
     }
 
     @Override
-    public boolean bindingReady() {
-        return callbackState.bindingReady();
+    public ObsOverlayInstallation armTargetSwap() {
+        callbackState.armTargetSwap();
+        return this;
+    }
+
+    @Override
+    public void disarmTargetSwap() {
+        callbackState.disarmTargetSwap();
     }
 
     @Override
@@ -209,19 +204,6 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
 
     boolean callbackFreed() {
         return callbackFreed;
-    }
-
-    synchronized void refreshTargetWindow(long targetWindowHandle) {
-        if (closed) {
-            return;
-        }
-        callbackState.refreshTargetWindow(targetWindowHandle);
-    }
-
-    synchronized void invalidateTargetWindow() {
-        if (!closed) {
-            callbackState.invalidateTargetWindow();
-        }
     }
 
     private ObsOverlayInstallException rollbackInstall(String message) {
@@ -307,73 +289,38 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
 
         int uninitialize();
 
-        long windowFromDeviceContext(long deviceContext);
-
-        long currentDeviceContext();
-
-        long currentOpenGlContext();
-
         OriginalSwapBuffers original(Pointer pointer);
     }
 
     private static final class CallbackState {
-        private final AtomicReference<WindowBinding> target;
         private final Runnable compositor;
         private final Consumer<Throwable> failureHandler;
-        private final NativePlatform platform;
-        private final ThreadLocal<Boolean> inCallback = ThreadLocal.withInitial(() -> false);
+        // The detour runs synchronously on the Java thread that called glfwSwapBuffers.
+        private final ThreadLocal<Boolean> targetSwapArmed = new ThreadLocal<>();
         private volatile OriginalSwapBuffers original;
         private int activeCallbacks;
 
         private CallbackState(
-                long targetWindowHandle,
                 Runnable compositor,
-                Consumer<Throwable> failureHandler,
-                NativePlatform platform
+                Consumer<Throwable> failureHandler
         ) {
-            this.target = new AtomicReference<>(WindowBinding.unbound(targetWindowHandle));
             this.compositor = compositor;
             this.failureHandler = failureHandler;
-            this.platform = platform;
         }
 
         private void setOriginal(OriginalSwapBuffers original) {
             this.original = Objects.requireNonNull(original, "original");
         }
 
-        private boolean bindingReady() {
-            return target.get().verified();
+        private void armTargetSwap() {
+            if (Boolean.TRUE.equals(targetSwapArmed.get())) {
+                throw new IllegalStateException("OBS target SwapBuffers scope is already armed on this thread");
+            }
+            targetSwapArmed.set(true);
         }
 
-        private void refreshTargetWindow(long targetWindowHandle) {
-            if (targetWindowHandle == 0L) {
-                throw new IllegalArgumentException("targetWindowHandle must not be zero");
-            }
-            WindowBinding binding = target.get();
-            if (binding.verified() && binding.windowHandle() == targetWindowHandle) {
-                return;
-            }
-
-            // Invalidate the previous generation before probing the replacement context.
-            if (binding.windowHandle() != targetWindowHandle || binding.verified()) {
-                target.set(WindowBinding.unbound(targetWindowHandle));
-            }
-            long deviceContext = platform.currentDeviceContext();
-            if (deviceContext == 0L) {
-                return;
-            }
-            long openGlContext = platform.currentOpenGlContext();
-            if (openGlContext == 0L) {
-                return;
-            }
-            if (platform.windowFromDeviceContext(deviceContext) != targetWindowHandle) {
-                return;
-            }
-            target.set(WindowBinding.verified(targetWindowHandle, deviceContext, openGlContext));
-        }
-
-        private void invalidateTargetWindow() {
-            target.set(WindowBinding.unbound(0L));
+        private void disarmTargetSwap() {
+            targetSwapArmed.remove();
         }
 
         private int invoke(long deviceContext) {
@@ -390,12 +337,10 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
             if (currentOriginal == null) {
                 throw new IllegalStateException("wglSwapBuffers callback invoked before its trampoline was available");
             }
-            if (Boolean.TRUE.equals(inCallback.get())) {
-                return currentOriginal.invoke(deviceContext);
-            }
-            inCallback.set(true);
+            boolean targetSwap = Boolean.TRUE.equals(targetSwapArmed.get());
+            targetSwapArmed.remove();
             try {
-                if (isTargetDeviceContext(deviceContext)) {
+                if (targetSwap) {
                     compositor.run();
                 }
             } catch (Throwable throwable) {
@@ -404,40 +349,8 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
                 } catch (Throwable reportingFailure) {
                     ECClientSettings.LOGGER.error("OBS overlay failure handler failed", reportingFailure);
                 }
-            } finally {
-                inCallback.remove();
             }
             return currentOriginal.invoke(deviceContext);
-        }
-
-        private boolean isTargetDeviceContext(long deviceContext) {
-            if (deviceContext == 0L) {
-                return false;
-            }
-            WindowBinding binding = target.get();
-            if (!binding.verified() || deviceContext != binding.deviceContext()) {
-                return false;
-            }
-            if (platform.currentOpenGlContext() != binding.openGlContext()) {
-                target.compareAndSet(binding, WindowBinding.unbound(binding.windowHandle()));
-                return false;
-            }
-            return target.get() == binding;
-        }
-
-        private record WindowBinding(
-                long windowHandle,
-                long deviceContext,
-                long openGlContext,
-                boolean verified
-        ) {
-            private static WindowBinding unbound(long windowHandle) {
-                return new WindowBinding(windowHandle, 0L, 0L, false);
-            }
-
-            private static WindowBinding verified(long windowHandle, long deviceContext, long openGlContext) {
-                return new WindowBinding(windowHandle, deviceContext, openGlContext, true);
-            }
         }
 
         private synchronized void enterCallback() {
@@ -478,31 +391,21 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
 
     private static final class JnaNativePlatform implements NativePlatform {
         private final Kernel32 kernel32;
-        private final User32 user32;
         private final MinHook minHook;
         private final Pointer swapBuffers;
-        private final Pointer getCurrentDeviceContext;
-        private final Pointer getCurrentOpenGlContext;
 
         private JnaNativePlatform(
                 Kernel32 kernel32,
-                User32 user32,
                 MinHook minHook,
-                Pointer swapBuffers,
-                Pointer getCurrentDeviceContext,
-                Pointer getCurrentOpenGlContext
+                Pointer swapBuffers
         ) {
             this.kernel32 = kernel32;
-            this.user32 = user32;
             this.minHook = minHook;
             this.swapBuffers = swapBuffers;
-            this.getCurrentDeviceContext = getCurrentDeviceContext;
-            this.getCurrentOpenGlContext = getCurrentOpenGlContext;
         }
 
         private static JnaNativePlatform create() throws IOException {
             Kernel32 kernel32 = Native.load("Kernel32", Kernel32.class);
-            User32 user32 = Native.load("User32", User32.class);
             Pointer openGl = kernel32.GetModuleHandleA("opengl32.dll");
             if (isNull(openGl)) {
                 throw new IOException("opengl32.dll is not loaded");
@@ -511,23 +414,12 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
             if (isNull(swapBuffers)) {
                 throw new IOException("wglSwapBuffers was not found");
             }
-            Pointer getCurrentDeviceContext = kernel32.GetProcAddress(openGl, "wglGetCurrentDC");
-            if (isNull(getCurrentDeviceContext)) {
-                throw new IOException("wglGetCurrentDC was not found");
-            }
-            Pointer getCurrentOpenGlContext = kernel32.GetProcAddress(openGl, "wglGetCurrentContext");
-            if (isNull(getCurrentOpenGlContext)) {
-                throw new IOException("wglGetCurrentContext was not found");
-            }
             Path library = NativeLibraryExtractor.extractMinHook();
             MinHook minHook = Native.load(library.toAbsolutePath().toString(), MinHook.class);
             return new JnaNativePlatform(
                     kernel32,
-                    user32,
                     minHook,
-                    swapBuffers,
-                    getCurrentDeviceContext,
-                    getCurrentOpenGlContext
+                    swapBuffers
             );
         }
 
@@ -574,22 +466,6 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
         @Override
         public int uninitialize() {
             return minHook.MH_Uninitialize();
-        }
-
-        @Override
-        public long windowFromDeviceContext(long deviceContext) {
-            Pointer window = user32.WindowFromDC(new Pointer(deviceContext));
-            return isNull(window) ? 0L : Pointer.nativeValue(window);
-        }
-
-        @Override
-        public long currentDeviceContext() {
-            return JNI.callP(Pointer.nativeValue(getCurrentDeviceContext));
-        }
-
-        @Override
-        public long currentOpenGlContext() {
-            return JNI.callP(Pointer.nativeValue(getCurrentOpenGlContext));
         }
 
         @Override

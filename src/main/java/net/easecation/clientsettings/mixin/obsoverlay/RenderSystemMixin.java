@@ -3,6 +3,7 @@ package net.easecation.clientsettings.mixin.obsoverlay;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayInstallation;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayRuntime;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -22,8 +23,16 @@ abstract class RenderSystemMixin {
             long window,
             Operation<Void> original
     ) {
-        if (ObsOverlayRuntime.preparePublicFrameForCapture(window)) {
+        if (!ObsOverlayRuntime.preparePublicFrameForCapture()) {
+            return;
+        }
+        ObsOverlayInstallation armed = ObsOverlayRuntime.armTargetSwap();
+        try {
             original.call(window);
+        } finally {
+            if (armed != null) {
+                armed.disarmTargetSwap();
+            }
         }
     }
 }
