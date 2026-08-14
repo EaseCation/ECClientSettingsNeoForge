@@ -21,16 +21,25 @@ public final class ObsOverlayHookInstaller implements ObsOverlayNativeInstaller 
             throw new IOException("Minecraft native window handle is unavailable");
         }
         ObsOverlayHook hook = ObsOverlayHook.install(targetWindowHandle, compositor, failureHandler);
-        return new WindowAwareInstallation(glfwWindow, hook);
+        return windowAware(hook, GLFWNativeWin32::glfwGetWin32Window);
+    }
+
+    static ObsOverlayInstallation windowAware(ObsOverlayHook hook, NativeWindowResolver windowResolver) {
+        return new WindowAwareInstallation(hook, windowResolver);
+    }
+
+    @FunctionalInterface
+    interface NativeWindowResolver {
+        long windowHandle(long glfwWindow);
     }
 
     private static final class WindowAwareInstallation implements ObsOverlayInstallation {
-        private long glfwWindow;
         private final ObsOverlayHook hook;
+        private final NativeWindowResolver windowResolver;
 
-        private WindowAwareInstallation(long glfwWindow, ObsOverlayHook hook) {
-            this.glfwWindow = glfwWindow;
+        private WindowAwareInstallation(ObsOverlayHook hook, NativeWindowResolver windowResolver) {
             this.hook = hook;
+            this.windowResolver = windowResolver;
         }
 
         @Override
@@ -45,15 +54,11 @@ public final class ObsOverlayHookInstaller implements ObsOverlayNativeInstaller 
 
         @Override
         public void updateWindow(long currentGlfwWindow) throws IOException {
-            if (currentGlfwWindow == glfwWindow) {
-                return;
-            }
-            long windowHandle = GLFWNativeWin32.glfwGetWin32Window(currentGlfwWindow);
+            long windowHandle = windowResolver.windowHandle(currentGlfwWindow);
             if (windowHandle == 0L) {
-                throw new IOException("Minecraft native window handle is unavailable after window recreation");
+                throw new IOException("Minecraft native window handle is unavailable");
             }
-            hook.updateTargetWindow(windowHandle);
-            glfwWindow = currentGlfwWindow;
+            hook.refreshTargetWindow(windowHandle);
         }
 
         @Override

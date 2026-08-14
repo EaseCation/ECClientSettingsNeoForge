@@ -205,8 +205,12 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
         return callbackFreed;
     }
 
-    void updateTargetWindow(long targetWindowHandle) {
-        callbackState.updateTargetWindow(targetWindowHandle);
+    void refreshTargetWindow(long targetWindowHandle) throws IOException {
+        long deviceContext = platform.currentDeviceContext();
+        if (deviceContext == 0L) {
+            throw new IOException("Minecraft WGL device context is unavailable");
+        }
+        callbackState.updateTarget(targetWindowHandle, deviceContext);
     }
 
     private ObsOverlayInstallException rollbackInstall(String message) {
@@ -332,12 +336,14 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
             }
         }
 
-        private void updateTargetWindow(long targetWindowHandle) {
+        private void updateTarget(long targetWindowHandle, long deviceContext) {
             if (targetWindowHandle == 0L) {
                 throw new IllegalArgumentException("targetWindowHandle must not be zero");
             }
-            if (target.windowHandle() != targetWindowHandle) {
-                target = new WindowBinding(targetWindowHandle, 0L);
+            WindowBinding binding = target;
+            if (binding.windowHandle() != targetWindowHandle
+                    || binding.deviceContext() != deviceContext) {
+                target = new WindowBinding(targetWindowHandle, deviceContext);
             }
         }
 
@@ -380,18 +386,7 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
                 return false;
             }
             WindowBinding binding = target;
-            if (deviceContext == binding.deviceContext()) {
-                return target == binding;
-            }
-            long window = platform.windowFromDeviceContext(deviceContext);
-            if (window == 0L || window != binding.windowHandle()) {
-                return false;
-            }
-            if (target != binding) {
-                return false;
-            }
-            target = new WindowBinding(binding.windowHandle(), deviceContext);
-            return true;
+            return deviceContext == binding.deviceContext() && target == binding;
         }
 
         private record WindowBinding(long windowHandle, long deviceContext) {
@@ -524,13 +519,13 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
             if (isNull(function)) {
                 return 0L;
             }
-            return JNI.invokeP(Pointer.nativeValue(function));
+            return JNI.callP(Pointer.nativeValue(function));
         }
 
         @Override
         public OriginalSwapBuffers original(Pointer pointer) {
             long address = Pointer.nativeValue(pointer);
-            return deviceContext -> JNI.invokePI(deviceContext, address);
+            return deviceContext -> JNI.callPI(deviceContext, address);
         }
     }
 }
