@@ -433,17 +433,20 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
         private final User32 user32;
         private final MinHook minHook;
         private final Pointer swapBuffers;
+        private final Pointer getCurrentDeviceContext;
 
         private JnaNativePlatform(
                 Kernel32 kernel32,
                 User32 user32,
                 MinHook minHook,
-                Pointer swapBuffers
+                Pointer swapBuffers,
+                Pointer getCurrentDeviceContext
         ) {
             this.kernel32 = kernel32;
             this.user32 = user32;
             this.minHook = minHook;
             this.swapBuffers = swapBuffers;
+            this.getCurrentDeviceContext = getCurrentDeviceContext;
         }
 
         private static JnaNativePlatform create() throws IOException {
@@ -457,9 +460,19 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
             if (isNull(swapBuffers)) {
                 throw new IOException("wglSwapBuffers was not found");
             }
+            Pointer getCurrentDeviceContext = kernel32.GetProcAddress(openGl, "wglGetCurrentDC");
+            if (isNull(getCurrentDeviceContext)) {
+                throw new IOException("wglGetCurrentDC was not found");
+            }
             Path library = NativeLibraryExtractor.extractMinHook();
             MinHook minHook = Native.load(library.toAbsolutePath().toString(), MinHook.class);
-            return new JnaNativePlatform(kernel32, user32, minHook, swapBuffers);
+            return new JnaNativePlatform(
+                    kernel32,
+                    user32,
+                    minHook,
+                    swapBuffers,
+                    getCurrentDeviceContext
+            );
         }
 
         @Override
@@ -515,11 +528,7 @@ public final class ObsOverlayHook implements ObsOverlayInstallation {
 
         @Override
         public long currentDeviceContext() {
-            Pointer function = kernel32.GetProcAddress(kernel32.GetModuleHandleA("opengl32.dll"), "wglGetCurrentDC");
-            if (isNull(function)) {
-                return 0L;
-            }
-            return JNI.callP(Pointer.nativeValue(function));
+            return JNI.callP(Pointer.nativeValue(getCurrentDeviceContext));
         }
 
         @Override
