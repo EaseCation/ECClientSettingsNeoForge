@@ -104,33 +104,44 @@ class ObsOverlayHookTest {
         platform.currentDeviceContext = 77L;
         FakeClosure closure = new FakeClosure(platform.operations);
         ObsOverlayHook hook = install(platform, closure, new AtomicInteger());
+        AtomicInteger windowResolverCalls = new AtomicInteger();
+        var installation = ObsOverlayHookInstaller.windowAware(
+                hook,
+                ignored -> {
+                    windowResolverCalls.incrementAndGet();
+                    return 42L;
+                },
+                42L
+        );
         int warmupFrames = 50_000;
         int measuredFrames = 1_000_000;
         for (int frame = 0; frame < warmupFrames; frame++) {
-            hook.refreshTargetWindow(42L);
+            installation.updateWindow(100L);
             closure.callback.invoke(77L);
         }
 
         long started = System.nanoTime();
         for (int frame = 0; frame < measuredFrames; frame++) {
-            hook.refreshTargetWindow(42L);
+            installation.updateWindow(100L);
             closure.callback.invoke(77L);
         }
         long elapsed = System.nanoTime() - started;
 
         System.out.printf(
                 Locale.ROOT,
-                "OBS_HOOK_BENCHMARK frames=%d ns_per_frame=%.2f current_dc_calls=%d window_from_dc_calls=%d original_calls=%d%n",
+                "OBS_HOOK_BENCHMARK frames=%d ns_per_frame=%.2f window_resolver_calls=%d current_dc_calls=%d window_from_dc_calls=%d original_calls=%d%n",
                 measuredFrames,
                 (double) elapsed / measuredFrames,
+                windowResolverCalls.get(),
                 platform.currentDcCalls.get(),
                 platform.windowFromDcCalls.get(),
                 platform.originalCalls.get()
         );
         assertEquals(1, platform.windowFromDcCalls.get());
-        assertEquals(1 + warmupFrames + measuredFrames, platform.currentDcCalls.get());
+        assertEquals(warmupFrames + measuredFrames, windowResolverCalls.get());
+        assertEquals(1, platform.currentDcCalls.get());
         assertEquals(warmupFrames + measuredFrames, platform.originalCalls.get());
-        hook.uninstall();
+        installation.uninstall();
     }
 
     @Test
@@ -197,7 +208,11 @@ class ObsOverlayHookTest {
         AtomicInteger composites = new AtomicInteger();
         ObsOverlayHook hook = install(platform, closure, composites);
         AtomicLong nativeWindow = new AtomicLong(42L);
-        var installation = ObsOverlayHookInstaller.windowAware(hook, ignored -> nativeWindow.get());
+        var installation = ObsOverlayHookInstaller.windowAware(
+                hook,
+                ignored -> nativeWindow.get(),
+                42L
+        );
 
         installation.updateWindow(100L);
         closure.callback.invoke(77L);
