@@ -28,6 +28,28 @@ class ObsOverlayLifecycleStructureTest {
     }
 
     @Test
+    void mixinEntryPointsPassThroughBeforeConfigLoads() {
+        assertFalse(ObsOverlayConfig.isLoaded());
+
+        ObsOverlayRuntime.beginComponent(ObsOverlayComponent.CHAT);
+        ObsOverlayRuntime.endComponent();
+
+        assertTrue(ObsOverlayRuntime.beginWorldComponent(ObsOverlayComponent.CHESTS, null));
+        assertTrue(ObsOverlayRuntime.endWorldComponent(null));
+
+        assertTrue(ObsOverlayRuntime.beginPlayerNamePass(DeferredNameTagPass.PUBLIC_ALIAS, null));
+        assertTrue(ObsOverlayRuntime.endWorldComponent(null));
+
+        ObsOverlayRuntime.beginScreen(null);
+        ObsOverlayRuntime.endScreen();
+
+        ObsOverlayRuntime.beginTestMarker();
+        ObsOverlayRuntime.endTestMarker();
+
+        assertFalse(ObsOverlayRuntime.suspendImmediatelyFastSignTextCache(null));
+    }
+
+    @Test
     void runtimeClassDoesNotResolveNativeHookOrWin32GlfwTypes() throws IOException {
         String classFile = classBytes(ObsOverlayRuntime.class);
 

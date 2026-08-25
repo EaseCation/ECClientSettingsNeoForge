@@ -186,7 +186,11 @@ public final class ObsOverlayRuntime {
         if (component.group() == ObsOverlayComponent.Group.WORLD) {
             throw new IllegalArgumentException("World OBS components require a buffer source: " + component);
         }
-        ObsOverlaySettings settings = ObsOverlayConfig.current();
+        ObsOverlaySettings settings = ObsOverlayConfig.currentOrNull();
+        if (settings == null) {
+            CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false, false));
+            return;
+        }
         CaptureMode mode = componentMode(component, settings);
         CAPTURE_STACK.push(new CaptureFrame(mode, false, false));
     }
@@ -199,7 +203,11 @@ public final class ObsOverlayRuntime {
         if (component.group() != ObsOverlayComponent.Group.WORLD) {
             throw new IllegalArgumentException("Expected a world OBS overlay component: " + component);
         }
-        ObsOverlaySettings settings = ObsOverlayConfig.current();
+        ObsOverlaySettings settings = ObsOverlayConfig.currentOrNull();
+        if (settings == null) {
+            CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false, false));
+            return true;
+        }
         CaptureMode mode = componentMode(component, settings);
         if (mode == CaptureMode.INHERIT) {
             CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false, false));
@@ -217,6 +225,11 @@ public final class ObsOverlayRuntime {
     }
 
     public static boolean beginPlayerNamePass(DeferredNameTagPass pass, MultiBufferSource buffers) {
+        ObsOverlaySettings settings = ObsOverlayConfig.currentOrNull();
+        if (settings == null) {
+            CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false, false));
+            return true;
+        }
         if (!strictPlayerNameRedirectAvailable()) {
             return false;
         }
@@ -226,7 +239,7 @@ public final class ObsOverlayRuntime {
         return beginWorldRedirect(
                 mode,
                 buffers,
-                ObsOverlayConfig.current(),
+                settings,
                 false,
                 pass == DeferredNameTagPass.PRIVATE_REAL_NAME
         );
@@ -245,7 +258,10 @@ public final class ObsOverlayRuntime {
             return PlayerNameTagRenderPlan.UNCHANGED;
         }
 
-        ObsOverlaySettings settings = ObsOverlayConfig.current();
+        ObsOverlaySettings settings = ObsOverlayConfig.currentOrNull();
+        if (settings == null) {
+            return PlayerNameTagRenderPlan.UNCHANGED;
+        }
         Minecraft minecraft = Minecraft.getInstance();
         if (settings.playerNameTagsAutoHide()
                 && minecraft.screen != null
@@ -350,7 +366,9 @@ public final class ObsOverlayRuntime {
     }
 
     public static boolean suspendImmediatelyFastSignTextCache(SignText text) {
-        return ObsOverlayConfig.current().protects(ObsOverlayComponent.SIGN_TEXT)
+        ObsOverlaySettings settings = ObsOverlayConfig.currentOrNull();
+        return settings != null
+                && settings.protects(ObsOverlayComponent.SIGN_TEXT)
                 && ImmediatelyFastCompatibility.suspendSignTextCache(text);
     }
 
@@ -362,7 +380,8 @@ public final class ObsOverlayRuntime {
         CaptureFrame frame = CAPTURE_STACK.peek();
         if (frame != null && frame.worldRedirect()) {
             boolean flushed = OverlayBufferFlusher.flush(buffers);
-            if (!flushed && (frame.forceFailClosed() || ObsOverlayConfig.current().failClosed())) {
+            ObsOverlaySettings settings = ObsOverlayConfig.currentOrNull();
+            if (!flushed && (frame.forceFailClosed() || settings != null && settings.failClosed())) {
                 // Keep the protected target bound until beginFrame restores it; delayed vertices cannot leak
                 // into the main target in the remainder of this frame.
                 CAPTURE_STACK.pop();
@@ -376,7 +395,11 @@ public final class ObsOverlayRuntime {
     }
 
     public static void beginScreen(Screen screen) {
-        ObsOverlaySettings settings = ObsOverlayConfig.current();
+        ObsOverlaySettings settings = ObsOverlayConfig.currentOrNull();
+        if (settings == null) {
+            CAPTURE_STACK.push(new CaptureFrame(CaptureMode.INHERIT, false, false));
+            return;
+        }
         boolean protectChatInput = screen instanceof ChatScreen
                 && settings.protects(ObsOverlayComponent.CHAT_INPUT);
         CaptureMode mode = settings.enabled() && (protectChatInput || isProtectedScreen(screen, settings))
@@ -390,9 +413,9 @@ public final class ObsOverlayRuntime {
     }
 
     public static void beginTestMarker() {
-        ObsOverlaySettings settings = ObsOverlayConfig.current();
+        ObsOverlaySettings settings = ObsOverlayConfig.currentOrNull();
         CAPTURE_STACK.push(new CaptureFrame(
-                settings.enabled() ? protectedMode(settings) : CaptureMode.INHERIT,
+                settings != null && settings.enabled() ? protectedMode(settings) : CaptureMode.INHERIT,
                 false,
                 false
         ));
@@ -505,7 +528,8 @@ public final class ObsOverlayRuntime {
         if (current == null) {
             return;
         }
-        boolean allowPrivateOverlays = ObsOverlayConfig.current().enabled() && protectionReady();
+        ObsOverlaySettings settings = ObsOverlayConfig.currentOrNull();
+        boolean allowPrivateOverlays = settings != null && settings.enabled() && protectionReady();
         if (!current.composite(allowPrivateOverlays) && allowPrivateOverlays) {
             markProtectionFailed(
                     "OBS capture reached the buffer swap without a prepared public frame",
