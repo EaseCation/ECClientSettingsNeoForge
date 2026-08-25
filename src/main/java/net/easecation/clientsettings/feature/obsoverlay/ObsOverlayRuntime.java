@@ -462,7 +462,10 @@ public final class ObsOverlayRuntime {
     }
 
     public static boolean preparePublicFrameForCapture() {
-        ObsOverlaySettings settings = ObsOverlayConfig.current();
+        ObsOverlaySettings settings = ObsOverlayConfig.currentOrNull();
+        if (settings == null) {
+            return true;
+        }
         if (!settings.enabled()) {
             return true;
         }

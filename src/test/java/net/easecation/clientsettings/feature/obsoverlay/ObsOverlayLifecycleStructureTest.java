@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,7 +17,14 @@ class ObsOverlayLifecycleStructureTest {
     @Test
     void unloadedConfigCannotBeReadThroughAPlaceholderDefault() {
         assertFalse(ObsOverlayConfig.isLoaded());
+        assertNull(ObsOverlayConfig.currentOrNull());
         assertThrows(IllegalStateException.class, ObsOverlayConfig::current);
+    }
+
+    @Test
+    void initialBufferSwapPassesThroughBeforeConfigLoads() {
+        assertFalse(ObsOverlayConfig.isLoaded());
+        assertTrue(ObsOverlayRuntime.preparePublicFrameForCapture());
     }
 
     @Test

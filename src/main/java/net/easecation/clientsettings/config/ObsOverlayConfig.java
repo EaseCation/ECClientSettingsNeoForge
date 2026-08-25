@@ -106,6 +106,10 @@ public final class ObsOverlayConfig {
         return snapshot;
     }
 
+    public static ObsOverlaySettings currentOrNull() {
+        return current;
+    }
+
     public static boolean isLoaded() {
         return current != null;
     }
