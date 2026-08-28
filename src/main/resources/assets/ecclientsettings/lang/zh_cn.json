@@ -390,8 +390,6 @@
   "option.ecclientsettings.performance.tier3_interval.tooltip": "数值越大，远处动画越不流畅，但 CPU 占用越低。",
   "option.ecclientsettings.performance.max_entities": "每帧完整动画实体数",
   "option.ecclientsettings.performance.max_entities.tooltip": "每帧允许完整更新的自定义实体上限；0 表示不限制。",
-  "option.ecclientsettings.performance.max_players": "每帧完整动画玩家数",
-  "option.ecclientsettings.performance.max_players.tooltip": "每帧允许完整更新的玩家上限；0 表示不限制。",
   "option.ecclientsettings.performance.budget_interval": "超出预算后的更新间隔",
   "option.ecclientsettings.performance.budget_interval.tooltip": "超过每帧预算的实体按此帧间隔错峰更新。",
   "option.ecclientsettings.performance.group.frozen_mesh": "自定义 · 远距离冻结 VBO",

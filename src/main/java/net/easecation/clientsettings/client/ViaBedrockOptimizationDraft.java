@@ -17,7 +17,6 @@ final class ViaBedrockOptimizationDraft {
     private double renderCullDistance;
     private double textDisplayCullDistance;
     private int maxAnimatedEntitiesPerFrame;
-    private int maxAnimatedPlayersPerFrame;
     private int animationThrottleInterval;
     private boolean frozenMeshEnabled;
     private double frozenMeshEnterDistance;
@@ -47,7 +46,6 @@ final class ViaBedrockOptimizationDraft {
         renderCullDistance = details.renderCullDistance();
         textDisplayCullDistance = details.textDisplayCullDistance();
         maxAnimatedEntitiesPerFrame = details.maxAnimatedEntitiesPerFrame();
-        maxAnimatedPlayersPerFrame = details.maxAnimatedPlayersPerFrame();
         animationThrottleInterval = details.animationThrottleInterval();
         frozenMeshEnabled = details.frozenMeshEnabled();
         frozenMeshEnterDistance = details.frozenMeshEnterDistance();
@@ -115,8 +113,6 @@ final class ViaBedrockOptimizationDraft {
     void setTextDisplayCullDistance(double value) { textDisplayCullDistance = value; }
     int maxAnimatedEntitiesPerFrame() { return maxAnimatedEntitiesPerFrame; }
     void setMaxAnimatedEntitiesPerFrame(int value) { maxAnimatedEntitiesPerFrame = value; }
-    int maxAnimatedPlayersPerFrame() { return maxAnimatedPlayersPerFrame; }
-    void setMaxAnimatedPlayersPerFrame(int value) { maxAnimatedPlayersPerFrame = value; }
     int animationThrottleInterval() { return animationThrottleInterval; }
     void setAnimationThrottleInterval(int value) { animationThrottleInterval = value; }
     boolean frozenMeshEnabled() { return frozenMeshEnabled; }
@@ -178,7 +174,6 @@ final class ViaBedrockOptimizationDraft {
                 renderCullDistance,
                 textDisplayCullDistance,
                 maxAnimatedEntitiesPerFrame,
-                maxAnimatedPlayersPerFrame,
                 animationThrottleInterval,
                 frozenMeshEnabled,
                 frozenMeshEnterDistance,

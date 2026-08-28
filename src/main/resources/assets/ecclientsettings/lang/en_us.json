@@ -390,8 +390,6 @@
   "option.ecclientsettings.performance.tier3_interval.tooltip": "Higher values reduce CPU work at the cost of less fluid distant animation.",
   "option.ecclientsettings.performance.max_entities": "Fully Animated Entities per Frame",
   "option.ecclientsettings.performance.max_entities.tooltip": "Maximum custom entities receiving a full update each frame; 0 is unlimited.",
-  "option.ecclientsettings.performance.max_players": "Fully Animated Players per Frame",
-  "option.ecclientsettings.performance.max_players.tooltip": "Maximum players receiving a full update each frame; 0 is unlimited.",
   "option.ecclientsettings.performance.budget_interval": "Over-Budget Update Interval",
   "option.ecclientsettings.performance.budget_interval.tooltip": "Entities beyond the per-frame budget use this staggered frame interval.",
   "option.ecclientsettings.performance.group.frozen_mesh": "Custom · Distant Frozen VBO",
