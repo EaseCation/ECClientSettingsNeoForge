@@ -188,13 +188,6 @@ final class ViaBedrockOptimizationCategory {
                 .setRequirement(custom)
                 .setSaveConsumer(draft::setMaxAnimatedEntitiesPerFrame)
                 .build());
-        group.add(entries.startIntField(label("max_players"), draft.maxAnimatedPlayersPerFrame())
-                .setDefaultValue(32)
-                .setMin(0).setMax(512)
-                .setTooltip(tooltip("max_players"))
-                .setRequirement(custom)
-                .setSaveConsumer(draft::setMaxAnimatedPlayersPerFrame)
-                .build());
         group.add(entries.startIntField(label("budget_interval"), draft.animationThrottleInterval())
                 .setDefaultValue(3)
                 .setMin(1).setMax(60)
