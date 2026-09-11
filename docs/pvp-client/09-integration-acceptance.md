@@ -18,7 +18,7 @@ Prove that the approved Profile, settings/input, and six visual-feature branches
 
 Reference commit: `b1d066585626e4a7adf9f4ddbeb31cbf1ec3245f`.
 
-Repository-level references: `README.md` and `LICENSE`. Feature source references and understood behaviors are enumerated in documents 01 through 08. Integration adopts no upstream build, packaging, resource, or test structure. The relevant rejected behavior is bundling upstream implementation/assets; the acceptance scan treats any such reuse outside these documents as a failure.
+Repository-level references: `README.md` and `LICENSE`. Feature source references and understood behaviors are enumerated in documents 01 through 08 and 15. Integration adopts no upstream build, packaging, resource, or test structure. The relevant rejected behavior is bundling upstream implementation/assets; the acceptance scan treats any such reuse outside these documents as a failure.
 
 ## Dependency Order
 
@@ -99,7 +99,7 @@ Record `PASS`, `FAIL`, or `NOT RUN` with date, build hash, environment, and evid
 | Profile | CRUD, restart persistence, per-Profile isolation, corrupt index/Profile recovery, failed-save rollback |
 | Global settings | Key rebind/restart, deliberate conflict, server-window permissions unchanged across Profiles |
 | Force sprint | Per-Profile enable/disable, shortcut, immediate sprint reset |
-| Block Outline | Full/partial/translucent shapes, alpha values, wall/reach behavior, disable comparison |
+| Block Outline/Mask | Full/partial/translucent shapes, independent outline/fill, alpha values, wall/reach behavior, disable comparison |
 | Low Fire | Offsets, third-person, item activation while burning, screen opening, Profile switch |
 | Fullbright | Cave/night/Nether/End, real Night Vision, Darkness, vanilla brightness persistence |
 | Time Changer | All presets, custom endpoints, daylight-cycle on/off, long fixed interval, dimensions/servers |

@@ -5,6 +5,8 @@ import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -64,5 +66,64 @@ class BlockOutlineControllerTest {
                 }
         );
         assertEquals(0x4000FF00, submittedColor.get());
+    }
+
+    @Test
+    void fillAndOutlineCanBeSubmittedIndependently() {
+        List<String> submissions = new ArrayList<>();
+        BlockOutlineSettings settings = new BlockOutlineSettings(
+                true,
+                ArgbColor.parse("#80123456"),
+                true,
+                ArgbColor.parse("#40654321")
+        );
+
+        assertTrue(controller.tryRender(
+                settings,
+                color -> {
+                    submissions.add("outline:" + Integer.toHexString(color));
+                    return true;
+                },
+                color -> {
+                    submissions.add("fill:" + Integer.toHexString(color));
+                    return true;
+                }
+        ));
+        assertEquals(List.of("fill:40654321", "outline:80123456"), submissions);
+    }
+
+    @Test
+    void fillOnlySubmissionCancelsVanillaWhenOutlineIsDisabled() {
+        AtomicInteger fillColor = new AtomicInteger();
+        BlockOutlineSettings settings = new BlockOutlineSettings(
+                false,
+                ArgbColor.parse("#CCFFFFFF"),
+                true,
+                ArgbColor.parse("#4055AAFF")
+        );
+
+        assertTrue(controller.tryRender(
+                settings,
+                ignored -> {
+                    throw new AssertionError("outline renderer must not be called");
+                },
+                color -> {
+                    fillColor.set(color);
+                    return true;
+                }
+        ));
+        assertEquals(0x4055AAFF, fillColor.get());
+    }
+
+    @Test
+    void failedFillAndOutlineSubmissionLeavesVanillaActive() {
+        BlockOutlineSettings settings = new BlockOutlineSettings(
+                true,
+                ArgbColor.parse("#80123456"),
+                true,
+                ArgbColor.parse("#40654321")
+        );
+
+        assertFalse(controller.tryRender(settings, ignored -> false, ignored -> false));
     }
 }

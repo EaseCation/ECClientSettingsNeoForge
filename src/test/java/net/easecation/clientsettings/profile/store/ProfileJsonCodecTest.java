@@ -43,6 +43,10 @@ class ProfileJsonCodecTest {
         currentWithoutHud.getAsJsonObject("features").remove("hud");
         JsonObject currentWithoutFeatures = encodedProfile(profile);
         currentWithoutFeatures.remove("features");
+        JsonObject legacyBlockOutline = encodedProfile(profile);
+        JsonObject blockOutline = legacyBlockOutline.getAsJsonObject("features").getAsJsonObject("blockOutline");
+        blockOutline.remove("fillEnabled");
+        blockOutline.remove("fillColor");
         JsonObject oldSchema = encodedProfile(ProfileDefinition.defaults(false));
         oldSchema.addProperty("schemaVersion", 2);
 
@@ -55,6 +59,10 @@ class ProfileJsonCodecTest {
                         ProfileFeatures.DEFAULT
                 ),
                 codec.decodeProfile(bytes(currentWithoutFeatures))
+        );
+        assertEquals(
+                ProfileFeatures.DEFAULT.blockOutline(),
+                codec.decodeProfile(bytes(legacyBlockOutline)).features().blockOutline()
         );
         assertThrows(IOException.class, () -> codec.decodeProfile(bytes(oldSchema)));
     }

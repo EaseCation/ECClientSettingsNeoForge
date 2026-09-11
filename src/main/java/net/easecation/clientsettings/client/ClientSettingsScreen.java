@@ -557,6 +557,22 @@ public final class ClientSettingsScreen {
                 .setSaveConsumer(draft::setBlockOutlineColor)
                 .build());
         category.addEntry(entries.startBooleanToggle(
+                        Component.translatable("option.ecclientsettings.block_outline.fill.enabled"),
+                        draft.features().blockOutline().fillEnabled()
+                )
+                .setDefaultValue(false)
+                .setTooltip(Component.translatable("option.ecclientsettings.block_outline.fill.enabled.tooltip"))
+                .setSaveConsumer(draft::setBlockOutlineFillEnabled)
+                .build());
+        category.addEntry(entries.startAlphaColorField(
+                        Component.translatable("option.ecclientsettings.block_outline.fill.color"),
+                        draft.features().blockOutline().fillColor().value()
+                )
+                .setDefaultValue(BlockOutlineSettings.DEFAULT_FILL_COLOR.value())
+                .setTooltip(Component.translatable("option.ecclientsettings.block_outline.fill.color.tooltip"))
+                .setSaveConsumer(draft::setBlockOutlineFillColor)
+                .build());
+        category.addEntry(entries.startBooleanToggle(
                         Component.translatable("option.ecclientsettings.low_fire.enabled"),
                         draft.features().lowFire().enabled()
                 )

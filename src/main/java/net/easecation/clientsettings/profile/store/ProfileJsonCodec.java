@@ -113,6 +113,8 @@ public final class ProfileJsonCodec {
 
         JsonObject blockOutline = object("enabled", features.blockOutline().enabled());
         blockOutline.addProperty("color", features.blockOutline().color().serialized());
+        blockOutline.addProperty("fillEnabled", features.blockOutline().fillEnabled());
+        blockOutline.addProperty("fillColor", features.blockOutline().fillColor().serialized());
         root.add("blockOutline", blockOutline);
 
         JsonObject lowFire = object("enabled", features.lowFire().enabled());
@@ -156,7 +158,7 @@ public final class ProfileJsonCodec {
         requireOnly(forceSprint, "forceSprint", Set.of("enabled"));
 
         JsonObject blockOutline = requireObject(root, "blockOutline");
-        requireOnly(blockOutline, "blockOutline", Set.of("enabled", "color"));
+        requireOnly(blockOutline, "blockOutline", Set.of("enabled", "color", "fillEnabled", "fillColor"));
 
         JsonObject lowFire = requireObject(root, "lowFire");
         requireOnly(lowFire, "lowFire", Set.of("enabled", "verticalOffset"));
@@ -180,7 +182,9 @@ public final class ProfileJsonCodec {
                 new ForceSprintSettings(requireBoolean(forceSprint, "enabled")),
                 new BlockOutlineSettings(
                         requireBoolean(blockOutline, "enabled"),
-                        ArgbColor.parse(requireString(blockOutline, "color"))
+                        ArgbColor.parse(requireString(blockOutline, "color")),
+                        requireBoolean(blockOutline, "fillEnabled"),
+                        ArgbColor.parse(requireString(blockOutline, "fillColor"))
                 ),
                 new LowFireSettings(
                         requireBoolean(lowFire, "enabled"),

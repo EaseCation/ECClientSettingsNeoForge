@@ -19,6 +19,8 @@ class ProfileModelTest {
         assertEquals("default", profile.id());
         assertFalse(profile.features().forceSprint().enabled());
         assertEquals("#CCFFFFFF", profile.features().blockOutline().color().serialized());
+        assertFalse(profile.features().blockOutline().fillEnabled());
+        assertEquals("#4DFFFFFF", profile.features().blockOutline().fillColor().serialized());
         assertEquals(0.2, profile.features().lowFire().verticalOffset());
         assertEquals(FullbrightMode.OFF, profile.features().fullbright().mode());
         assertEquals(TimeChangerMode.FOLLOW_SERVER, profile.features().timeChanger().mode());

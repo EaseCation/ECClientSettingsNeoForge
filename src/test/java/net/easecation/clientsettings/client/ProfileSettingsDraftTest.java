@@ -73,11 +73,13 @@ class ProfileSettingsDraftTest {
     }
 
     @Test
-    void blockOutlineDraftSavesEnablementAndPackedColorTogether() throws IOException {
+    void blockSelectionDraftSavesOutlineAndFillSettingsTogether() throws IOException {
         ProfileManager profiles = manager();
         ProfileSettingsDraft draft = ProfileSettingsDraft.active(profiles);
         draft.setBlockOutlineEnabled(true);
         draft.setBlockOutlineColor(0x40123456);
+        draft.setBlockOutlineFillEnabled(true);
+        draft.setBlockOutlineFillColor(0x4055AAFF);
 
         draft.save(profiles);
 
@@ -85,6 +87,11 @@ class ProfileSettingsDraftTest {
         assertEquals(
                 new ArgbColor(0x40123456),
                 profiles.activeSnapshot().features().blockOutline().color()
+        );
+        assertTrue(profiles.activeSnapshot().features().blockOutline().fillEnabled());
+        assertEquals(
+                new ArgbColor(0x4055AAFF),
+                profiles.activeSnapshot().features().blockOutline().fillColor()
         );
     }
 

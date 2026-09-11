@@ -2,17 +2,21 @@
 
 ## Goal
 
-Allow a Profile to replace the vanilla targeted-block outline color and opacity while retaining vanilla target acquisition, shape, depth, distance, and line width.
+Allow a Profile to replace the vanilla targeted-block outline color and opacity,
+with an optional filled selection mask, while retaining vanilla target acquisition,
+shape, depth, distance, and line width.
 
 ## Non-Goals
 
-- No dynamic line width, filled highlight, entity outline, through-wall rendering, or extended reach.
+- No dynamic line width, entity outline, through-wall rendering, or extended reach.
 - No Mixin when the supported NeoForge event can express the behavior.
 - No custom texture, shader, or copied rendering utility.
 
 ## Current Repository State
 
-The module has no targeted-block rendering handler, outline setting, render-event bootstrap, or Block Outline Mixin. The active settings screen has no rendering category yet.
+The module now has a targeted-block rendering handler and rendering settings
+category. The handler uses the cancellable NeoForge block-highlight event for both
+the outline and the optional filled mask; no Block Outline Mixin is registered.
 
 ## AxolotlClient Reference Analysis
 
@@ -28,13 +32,15 @@ Useful behavior:
 
 - The feature preserves the targeted block's actual `VoxelShape`.
 - Color includes alpha rather than a separate opaque-only palette.
+- The optional fill preserves every box in the target shape and uses a separate
+  ARGB color.
 - The vanilla selection result remains authoritative.
 
 Rejected implementation details:
 
 - Fabric/Yarn Mixin targets are not applicable to NeoForge 1.21.8.
 - Dynamic line-width mutation relies on internal render state and is outside the requested behavior.
-- Filled outlines and upstream draw helpers add scope and are not reused.
+- Upstream draw helpers and Fabric/Yarn injection signatures are not reused.
 
 ## NeoForge 1.21.8 Evidence
 
@@ -47,13 +53,16 @@ This is a complete supported event surface; no Mixin is justified.
 ```json
 "blockOutline": {
   "enabled": false,
-  "color": "#CCFFFFFF"
+  "color": "#CCFFFFFF",
+  "fillEnabled": false,
+  "fillColor": "#4DFFFFFF"
 }
 ```
 
 - Default disabled preserves existing behavior for upgraded players.
 - `#AARRGGBB` is validated and normalized by Profile Core.
 - Zero alpha is valid and intentionally makes the outline invisible while the feature remains enabled.
+- The fill can be enabled without enabling the outline and defaults to disabled.
 
 ## Runtime Flow
 
@@ -64,8 +73,9 @@ This is a complete supported event surface; no Mixin is justified.
 3. Resolve the target position and current block state from the client level.
 4. Obtain the exact vanilla shape with the current camera entity's collision context.
 5. Translate by block position minus camera position.
-6. Acquire the vanilla line render buffer and call `ShapeRenderer.renderShape` with configured ARGB.
-7. Cancel the event only after the custom vertices are submitted.
+6. If enabled, submit the filled shape boxes to the native debug quad layer with the configured ARGB.
+7. Acquire the vanilla line render buffer and call `ShapeRenderer.renderShape` with configured ARGB when the outline is enabled.
+8. Cancel the event only after at least one enabled pass submits vertices.
 
 If the client level, camera entity, state, or shape is unavailable, the handler returns without cancelling so vanilla remains the fallback.
 
@@ -77,7 +87,7 @@ There is no transient controller state. Profile switching changes the next rende
 
 ## Expected Code Areas
 
-- `feature/blockoutline/BlockOutlineRenderer`
+- `feature/blockoutline/BlockOutlineRenderer` and `BlockOutlineController`
 - Registration from the client event bootstrap
 - Rendering-category builder in the settings screen
 - Profile model default/validation tests
@@ -86,8 +96,8 @@ No new Mixin or resource asset is expected.
 
 ## Automated Tests
 
-- Disabled setting does not cancel or render.
-- Enabled setting passes the exact packed ARGB value.
+- Disabled outline and fill do not cancel or render.
+- Enabled outline and fill pass their exact packed ARGB values independently.
 - Missing client context fails open to vanilla.
 - Profile switch changes the setting source without cached stale color.
 - Static structure check confirms no Block Outline Mixin is registered.
@@ -96,7 +106,7 @@ Rendering calls should be isolated behind a narrow adapter so control flow and c
 
 ## Manual Acceptance
 
-- Target full cubes, slabs, stairs, fences, fluids, and translucent blocks.
+- Target full cubes, slabs, stairs, fences, fluids, and translucent blocks with and without the fill.
 - Verify shape matches vanilla at multiple camera positions.
 - Test opaque, semi-transparent, and zero-alpha colors.
 - Verify walls and vanilla reach still prevent an outline.
@@ -105,6 +115,6 @@ Rendering calls should be isolated behind a narrow adapter so control flow and c
 
 ## Completion Criteria
 
-- Only color and opacity differ from vanilla.
-- Event cancellation occurs only when a valid custom outline is submitted.
-- No Mixin, custom asset, reach change, fill, or dynamic line width is introduced.
+- The outline retains vanilla shape and depth behavior; the optional fill uses the same target shape with its own color and surface depth behavior.
+- Event cancellation occurs only when a valid custom selection pass is submitted.
+- No Mixin, custom asset, reach change, through-wall pass, or dynamic line width is introduced.

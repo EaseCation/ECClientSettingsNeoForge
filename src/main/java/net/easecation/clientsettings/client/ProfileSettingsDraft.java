@@ -71,14 +71,32 @@ public final class ProfileSettingsDraft {
 
     public void setBlockOutlineEnabled(boolean enabled) {
         BlockOutlineSettings current = pendingFeatures.blockOutline();
-        pendingFeatures = pendingFeatures.withBlockOutline(new BlockOutlineSettings(enabled, current.color()));
+        pendingFeatures = pendingFeatures.withBlockOutline(new BlockOutlineSettings(
+                enabled, current.color(), current.fillEnabled(), current.fillColor()
+        ));
     }
 
     public void setBlockOutlineColor(int color) {
         BlockOutlineSettings current = pendingFeatures.blockOutline();
         pendingFeatures = pendingFeatures.withBlockOutline(new BlockOutlineSettings(
                 current.enabled(),
-                new ArgbColor(color)
+                new ArgbColor(color),
+                current.fillEnabled(),
+                current.fillColor()
+        ));
+    }
+
+    public void setBlockOutlineFillEnabled(boolean enabled) {
+        BlockOutlineSettings current = pendingFeatures.blockOutline();
+        pendingFeatures = pendingFeatures.withBlockOutline(new BlockOutlineSettings(
+                current.enabled(), current.color(), enabled, current.fillColor()
+        ));
+    }
+
+    public void setBlockOutlineFillColor(int color) {
+        BlockOutlineSettings current = pendingFeatures.blockOutline();
+        pendingFeatures = pendingFeatures.withBlockOutline(new BlockOutlineSettings(
+                current.enabled(), current.color(), current.fillEnabled(), new ArgbColor(color)
         ));
     }
 

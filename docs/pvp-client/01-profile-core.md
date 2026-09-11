@@ -73,7 +73,12 @@ Each Profile file is self-describing:
   "name": "Default",
   "features": {
     "forceSprint": {"enabled": true},
-    "blockOutline": {"enabled": false, "color": "#CCFFFFFF"},
+    "blockOutline": {
+      "enabled": false,
+      "color": "#CCFFFFFF",
+      "fillEnabled": false,
+      "fillColor": "#4DFFFFFF"
+    },
     "lowFire": {"enabled": false, "verticalOffset": 0.2},
     "fullbright": {"mode": "OFF", "strength": 1.0},
     "timeChanger": {"mode": "FOLLOW_SERVER", "customTime": 6000},
