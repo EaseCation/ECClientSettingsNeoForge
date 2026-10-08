@@ -101,6 +101,90 @@ public final class ProfileSettingsDraft {
         ));
     }
 
+    public void setHeldItemEnabled(boolean value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withEnabled(value));
+    }
+
+    public void setHeldItemShowName(boolean value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withShowName(value));
+    }
+
+    public void setHeldItemShowDescription(boolean value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withShowDescription(value));
+    }
+
+    public void setHeldItemShowEnchantments(boolean value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withShowEnchantments(value));
+    }
+
+    public void setHeldItemShowAdditional(boolean value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withShowAdditional(value));
+    }
+
+    public void setHeldItemShowOmitted(boolean value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withShowOmitted(value));
+    }
+
+    public void setHeldItemMaxCharacters(int value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withMaxCharacters(value));
+    }
+
+    public void setHeldItemMaxLines(int value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withMaxLines(value));
+    }
+
+    public void setHeldItemMaxDescriptionLines(int value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withMaxDescriptionLines(value));
+    }
+
+    public void setHeldItemLineSpacing(int value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withLineSpacing(value));
+    }
+
+    public void setHeldItemNameGap(int value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withNameGap(value));
+    }
+
+    public void setHeldItemVerticalOffset(int value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withVerticalOffset(value));
+    }
+
+    public void setHeldItemBaseSeconds(double value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withBaseSeconds(value));
+    }
+
+    public void setHeldItemExtraLineSeconds(double value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withExtraLineSeconds(value));
+    }
+
+    public void setHeldItemBackground(net.easecation.clientsettings.profile.model.HeldItemBackground value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withBackground(value));
+    }
+
+    public void setHeldItemBackgroundColor(int value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withBackgroundColor(new ArgbColor(value)));
+    }
+
+    public void setHeldItemChroma(boolean value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withChroma(value));
+    }
+
+    public void setHeldItemChromaSpeed(double value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withChromaSpeed(value));
+    }
+
+    public void setHeldItemChromaSaturation(double value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withChromaSaturation(value));
+    }
+
+    public void setHeldItemChromaBrightness(double value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withChromaBrightness(value));
+    }
+
+    public void setHeldItemChromaOpacity(double value) {
+        pendingFeatures = pendingFeatures.withHeldItemInfo(pendingFeatures.heldItemInfo().withChromaOpacity(value));
+    }
+
     public void setDroppedItemPhysics(boolean value) {
         DroppedItemSettings current = pendingFeatures.droppedItems();
         pendingFeatures = pendingFeatures.withDroppedItems(new DroppedItemSettings(value, current.rotation(), current.floating()));

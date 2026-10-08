@@ -95,6 +95,7 @@ public final class ClientSettingsScreen {
         addObsOverlayCategory(builder, entries, obsOverlayDraft, saveError);
         addRenderingCategory(builder, entries, draft);
         addDroppedItemsCategory(builder, entries, draft);
+        HeldItemInfoCategory.add(builder, entries, draft);
         addServerPermissionsCategory(builder, entries, allowTitle, allowFrame);
 
         builder.setSavingRunnable(() -> {

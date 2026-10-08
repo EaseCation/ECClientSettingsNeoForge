@@ -8,6 +8,7 @@ import net.easecation.clientsettings.config.ClientSettingsConfig;
 import net.easecation.clientsettings.config.ObsOverlayConfig;
 import net.easecation.clientsettings.feature.blockoutline.BlockOutlineRenderer;
 import net.easecation.clientsettings.feature.hud.HudRenderer;
+import net.easecation.clientsettings.feature.helditeminfo.HeldItemInfoRuntime;
 import net.easecation.clientsettings.feature.hud.keystrokes.KeystrokesInputTracker;
 import net.easecation.clientsettings.feature.hitcolor.HitColorRuntime;
 import net.easecation.clientsettings.feature.obsoverlay.ObsOverlayGuiLayer;
@@ -46,6 +47,7 @@ public final class ECClientSettings {
         NeoForge.EVENT_BUS.addListener(ClientInputDispatcher::onClientTick);
         NeoForge.EVENT_BUS.addListener(TimeChangerRuntime::onClientTick);
         NeoForge.EVENT_BUS.addListener(TimeChangerRuntime::onLoggingOut);
+        NeoForge.EVENT_BUS.addListener(HeldItemInfoRuntime::onLoggingOut);
         NeoForge.EVENT_BUS.addListener(ZoomEvents::onClientTick);
         NeoForge.EVENT_BUS.addListener(ZoomEvents::onComputeFov);
         NeoForge.EVENT_BUS.addListener(ZoomEvents::onCalculatePlayerTurn);

@@ -22,6 +22,8 @@ import net.easecation.clientsettings.profile.model.LowFireSettings;
 import net.easecation.clientsettings.profile.model.ProfileDefinition;
 import net.easecation.clientsettings.profile.model.ProfileFeatures;
 import net.easecation.clientsettings.profile.model.DroppedItemSettings;
+import net.easecation.clientsettings.profile.model.HeldItemInfoSettings;
+import net.easecation.clientsettings.profile.model.HeldItemBackground;
 import net.easecation.clientsettings.profile.model.ProfileIndex;
 import net.easecation.clientsettings.profile.model.TimeChangerMode;
 import net.easecation.clientsettings.profile.model.TimeChangerSettings;
@@ -151,12 +153,35 @@ public final class ProfileJsonCodec {
         droppedItems.addProperty("rotation", features.droppedItems().rotation());
         droppedItems.addProperty("floating", features.droppedItems().floating());
         root.add("droppedItems", droppedItems);
+        JsonObject heldItemInfo = new JsonObject();
+        heldItemInfo.addProperty("enabled", features.heldItemInfo().enabled());
+        heldItemInfo.addProperty("showName", features.heldItemInfo().showName());
+        heldItemInfo.addProperty("showDescription", features.heldItemInfo().showDescription());
+        heldItemInfo.addProperty("showEnchantments", features.heldItemInfo().showEnchantments());
+        heldItemInfo.addProperty("showAdditional", features.heldItemInfo().showAdditional());
+        heldItemInfo.addProperty("showOmitted", features.heldItemInfo().showOmitted());
+        heldItemInfo.addProperty("maxCharacters", features.heldItemInfo().maxCharacters());
+        heldItemInfo.addProperty("maxLines", features.heldItemInfo().maxLines());
+        heldItemInfo.addProperty("maxDescriptionLines", features.heldItemInfo().maxDescriptionLines());
+        heldItemInfo.addProperty("lineSpacing", features.heldItemInfo().lineSpacing());
+        heldItemInfo.addProperty("nameGap", features.heldItemInfo().nameGap());
+        heldItemInfo.addProperty("verticalOffset", features.heldItemInfo().verticalOffset());
+        heldItemInfo.addProperty("baseSeconds", features.heldItemInfo().baseSeconds());
+        heldItemInfo.addProperty("extraLineSeconds", features.heldItemInfo().extraLineSeconds());
+        heldItemInfo.addProperty("background", features.heldItemInfo().background().name());
+        heldItemInfo.addProperty("backgroundColor", features.heldItemInfo().backgroundColor().serialized());
+        heldItemInfo.addProperty("chroma", features.heldItemInfo().chroma());
+        heldItemInfo.addProperty("chromaSpeed", features.heldItemInfo().chromaSpeed());
+        heldItemInfo.addProperty("chromaSaturation", features.heldItemInfo().chromaSaturation());
+        heldItemInfo.addProperty("chromaBrightness", features.heldItemInfo().chromaBrightness());
+        heldItemInfo.addProperty("chromaOpacity", features.heldItemInfo().chromaOpacity());
+        root.add("heldItemInfo", heldItemInfo);
         return root;
     }
 
     private ProfileFeatures decodeFeatures(JsonObject root) throws IOException {
         requireOnly(root, "features", Set.of(
-                "forceSprint", "blockOutline", "lowFire", "fullbright", "timeChanger", "zoom", "hitColor", "hud", "droppedItems"
+                "forceSprint", "blockOutline", "lowFire", "fullbright", "timeChanger", "zoom", "hitColor", "hud", "droppedItems", "heldItemInfo"
         ));
 
         JsonObject forceSprint = requireObject(root, "forceSprint");
@@ -185,6 +210,9 @@ public final class ProfileJsonCodec {
 
         JsonObject droppedItems = requireObject(root, "droppedItems");
         requireOnly(droppedItems, "droppedItems", Set.of("physics", "rotation", "floating"));
+
+        JsonObject heldItemInfo = requireObject(root, "heldItemInfo");
+        requireOnly(heldItemInfo, "heldItemInfo", Set.of("enabled", "showName", "showDescription", "showEnchantments", "showAdditional", "showOmitted", "maxCharacters", "maxLines", "maxDescriptionLines", "lineSpacing", "nameGap", "verticalOffset", "baseSeconds", "extraLineSeconds", "background", "backgroundColor", "chroma", "chromaSpeed", "chromaSaturation", "chromaBrightness", "chromaOpacity"));
 
         return new ProfileFeatures(
                 new ForceSprintSettings(requireBoolean(forceSprint, "enabled")),
@@ -222,7 +250,30 @@ public final class ProfileJsonCodec {
                 ),
                 decodeHud(requireObject(root, "hud")),
                 new DroppedItemSettings(requireBoolean(droppedItems, "physics"),
-                        requireBoolean(droppedItems, "rotation"), requireBoolean(droppedItems, "floating"))
+                        requireBoolean(droppedItems, "rotation"), requireBoolean(droppedItems, "floating")),
+                new HeldItemInfoSettings(
+                        requireBoolean(heldItemInfo, "enabled"),
+                        requireBoolean(heldItemInfo, "showName"),
+                        requireBoolean(heldItemInfo, "showDescription"),
+                        requireBoolean(heldItemInfo, "showEnchantments"),
+                        requireBoolean(heldItemInfo, "showAdditional"),
+                        requireBoolean(heldItemInfo, "showOmitted"),
+                        requireInt(heldItemInfo, "maxCharacters"),
+                        requireInt(heldItemInfo, "maxLines"),
+                        requireInt(heldItemInfo, "maxDescriptionLines"),
+                        requireInt(heldItemInfo, "lineSpacing"),
+                        requireInt(heldItemInfo, "nameGap"),
+                        requireInt(heldItemInfo, "verticalOffset"),
+                        requireDouble(heldItemInfo, "baseSeconds"),
+                        requireDouble(heldItemInfo, "extraLineSeconds"),
+                        requireEnum(heldItemInfo, "background", HeldItemBackground.class),
+                        ArgbColor.parse(requireString(heldItemInfo, "backgroundColor")),
+                        requireBoolean(heldItemInfo, "chroma"),
+                        requireDouble(heldItemInfo, "chromaSpeed"),
+                        requireDouble(heldItemInfo, "chromaSaturation"),
+                        requireDouble(heldItemInfo, "chromaBrightness"),
+                        requireDouble(heldItemInfo, "chromaOpacity")
+                )
         );
     }
 

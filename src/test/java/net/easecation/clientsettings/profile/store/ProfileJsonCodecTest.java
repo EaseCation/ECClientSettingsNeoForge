@@ -3,6 +3,9 @@ package net.easecation.clientsettings.profile.store;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.easecation.clientsettings.profile.model.DroppedItemSettings;
+import net.easecation.clientsettings.profile.model.HeldItemInfoSettings;
+import net.easecation.clientsettings.profile.model.HeldItemBackground;
+import net.easecation.clientsettings.profile.model.ArgbColor;
 import net.easecation.clientsettings.profile.model.HudSettings;
 import net.easecation.clientsettings.profile.model.HudWidgetId;
 import net.easecation.clientsettings.profile.model.ProfileDefinition;
@@ -20,6 +23,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProfileJsonCodecTest {
 
     private final ProfileJsonCodec codec = new ProfileJsonCodec();
+
+    @Test
+    void heldItemInformationPersistsAndMissingSettingsKeepVanilla() throws IOException {
+        var settings = HeldItemInfoSettings.DEFAULT.withEnabled(true).withShowName(false)
+                .withShowDescription(false).withShowEnchantments(false).withShowAdditional(false)
+                .withShowOmitted(false).withMaxCharacters(17).withMaxLines(5).withMaxDescriptionLines(2)
+                .withLineSpacing(12).withNameGap(4).withVerticalOffset(-10).withBaseSeconds(3)
+                .withExtraLineSeconds(1).withBackground(HeldItemBackground.CUSTOM)
+                .withBackgroundColor(ArgbColor.parse("#4000FF00")).withChroma(true)
+                .withChromaSpeed(0.2).withChromaSaturation(0.5).withChromaBrightness(0.8).withChromaOpacity(0.6);
+        var profile = ProfileDefinition.defaults(false).withFeatures(ProfileFeatures.DEFAULT.withHeldItemInfo(settings));
+        assertEquals(profile, codec.decodeProfile(codec.encodeProfile(profile)));
+        assertEquals(settings, profile.features().withDroppedItems(DroppedItemSettings.DEFAULT).heldItemInfo());
+        JsonObject old = encodedProfile(ProfileDefinition.defaults(false));
+        old.getAsJsonObject("features").remove("heldItemInfo");
+        assertEquals(HeldItemInfoSettings.DEFAULT, codec.decodeProfile(bytes(old)).features().heldItemInfo());
+        old.getAsJsonObject("features").add("heldItemInfo", JsonParser.parseString("{\"enabled\":true}").getAsJsonObject());
+        assertEquals(HeldItemInfoSettings.DEFAULT.withEnabled(true), codec.decodeProfile(bytes(old)).features().heldItemInfo());
+        old.getAsJsonObject("features").getAsJsonObject("heldItemInfo").addProperty("maxCharacters", 0);
+        assertThrows(IOException.class, () -> codec.decodeProfile(bytes(old)));
+    }
 
     @Test
     void droppedItemsRoundTripAllCombinationsAndOldProfilesDefaultToVanilla() throws IOException {

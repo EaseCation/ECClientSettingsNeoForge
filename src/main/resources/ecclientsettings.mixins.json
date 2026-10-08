@@ -16,7 +16,8 @@
     "render.OverlayTextureAccessor",
     "render.ScreenEffectRendererMixin",
     "render.ItemEntityRenderStateMixin",
-    "render.ItemEntityRendererMixin"
+    "render.ItemEntityRendererMixin",
+    "render.HeldItemInfoGuiMixin"
   ],
   "injectors": {
     "defaultRequire": 1
