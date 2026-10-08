@@ -14,7 +14,9 @@
     "OptionInstanceMixin",
     "render.LightTextureMixin",
     "render.OverlayTextureAccessor",
-    "render.ScreenEffectRendererMixin"
+    "render.ScreenEffectRendererMixin",
+    "render.ItemEntityRenderStateMixin",
+    "render.ItemEntityRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

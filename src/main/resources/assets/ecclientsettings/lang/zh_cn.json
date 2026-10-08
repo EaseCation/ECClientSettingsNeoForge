@@ -429,5 +429,12 @@
   "option.ecclientsettings.performance.block_model_lod_low": "低模距离（section）",
   "option.ecclientsettings.performance.block_model_lod_low.tooltip": "距离大于等于该值时使用低模；HIGH 与 LOW 之间保持当前层级以避免闪烁。非法组合回退为 4/6。",
   "option.ecclientsettings.performance.block_model_lod_rebuilds": "每帧最大 LOD 重建数",
-  "option.ecclientsettings.performance.block_model_lod_rebuilds.tooltip": "限制玩家移动或配置变化引起的普通区块重建提交；HIGH 恢复始终优先。"
+  "option.ecclientsettings.performance.block_model_lod_rebuilds.tooltip": "限制玩家移动或配置变化引起的普通区块重建提交；HIGH 恢复始终优先。",
+  "category.ecclientsettings.dropped_items": "掉落物",
+  "option.ecclientsettings.dropped_items.physics": "物理掉落渲染",
+  "option.ecclientsettings.dropped_items.rotation": "旋转渲染",
+  "option.ecclientsettings.dropped_items.floating": "悬浮渲染",
+  "option.ecclientsettings.dropped_items.physics.tooltip": "落地后平放并停止翻滚。空中翻滚由旋转开关控制，仅改变外观。",
+  "option.ecclientsettings.dropped_items.rotation.tooltip": "物理模式关闭时控制原版旋转；开启时控制空中翻滚，落地后保持静止。",
+  "option.ecclientsettings.dropped_items.floating.tooltip": "控制上下悬浮动画。与物理模式独立，可同时开启；遵循物品自身的悬浮限制。"
 }

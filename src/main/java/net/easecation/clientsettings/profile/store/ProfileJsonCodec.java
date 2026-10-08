@@ -21,6 +21,7 @@ import net.easecation.clientsettings.profile.model.KeystrokesSettings;
 import net.easecation.clientsettings.profile.model.LowFireSettings;
 import net.easecation.clientsettings.profile.model.ProfileDefinition;
 import net.easecation.clientsettings.profile.model.ProfileFeatures;
+import net.easecation.clientsettings.profile.model.DroppedItemSettings;
 import net.easecation.clientsettings.profile.model.ProfileIndex;
 import net.easecation.clientsettings.profile.model.TimeChangerMode;
 import net.easecation.clientsettings.profile.model.TimeChangerSettings;
@@ -146,12 +147,16 @@ public final class ProfileJsonCodec {
         hitColor.addProperty("color", features.hitColor().color().serialized());
         root.add("hitColor", hitColor);
         root.add("hud", encodeHud(features.hud()));
+        JsonObject droppedItems = object("physics", features.droppedItems().physics());
+        droppedItems.addProperty("rotation", features.droppedItems().rotation());
+        droppedItems.addProperty("floating", features.droppedItems().floating());
+        root.add("droppedItems", droppedItems);
         return root;
     }
 
     private ProfileFeatures decodeFeatures(JsonObject root) throws IOException {
         requireOnly(root, "features", Set.of(
-                "forceSprint", "blockOutline", "lowFire", "fullbright", "timeChanger", "zoom", "hitColor", "hud"
+                "forceSprint", "blockOutline", "lowFire", "fullbright", "timeChanger", "zoom", "hitColor", "hud", "droppedItems"
         ));
 
         JsonObject forceSprint = requireObject(root, "forceSprint");
@@ -177,6 +182,9 @@ public final class ProfileJsonCodec {
 
         JsonObject hitColor = requireObject(root, "hitColor");
         requireOnly(hitColor, "hitColor", Set.of("enabled", "color"));
+
+        JsonObject droppedItems = requireObject(root, "droppedItems");
+        requireOnly(droppedItems, "droppedItems", Set.of("physics", "rotation", "floating"));
 
         return new ProfileFeatures(
                 new ForceSprintSettings(requireBoolean(forceSprint, "enabled")),
@@ -212,7 +220,9 @@ public final class ProfileJsonCodec {
                         requireBoolean(hitColor, "enabled"),
                         ArgbColor.parse(requireString(hitColor, "color"))
                 ),
-                decodeHud(requireObject(root, "hud"))
+                decodeHud(requireObject(root, "hud")),
+                new DroppedItemSettings(requireBoolean(droppedItems, "physics"),
+                        requireBoolean(droppedItems, "rotation"), requireBoolean(droppedItems, "floating"))
         );
     }
 

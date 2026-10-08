@@ -1,6 +1,7 @@
 package net.easecation.clientsettings.client;
 
 import net.easecation.clientsettings.profile.model.ProfileFeatures;
+import net.easecation.clientsettings.profile.model.DroppedItemSettings;
 import net.easecation.clientsettings.profile.model.ArgbColor;
 import net.easecation.clientsettings.profile.model.BlockOutlineSettings;
 import net.easecation.clientsettings.profile.model.LowFireSettings;
@@ -98,6 +99,21 @@ public final class ProfileSettingsDraft {
         pendingFeatures = pendingFeatures.withBlockOutline(new BlockOutlineSettings(
                 current.enabled(), current.color(), current.fillEnabled(), new ArgbColor(color)
         ));
+    }
+
+    public void setDroppedItemPhysics(boolean value) {
+        DroppedItemSettings current = pendingFeatures.droppedItems();
+        pendingFeatures = pendingFeatures.withDroppedItems(new DroppedItemSettings(value, current.rotation(), current.floating()));
+    }
+
+    public void setDroppedItemRotation(boolean value) {
+        DroppedItemSettings current = pendingFeatures.droppedItems();
+        pendingFeatures = pendingFeatures.withDroppedItems(new DroppedItemSettings(current.physics(), value, current.floating()));
+    }
+
+    public void setDroppedItemFloating(boolean value) {
+        DroppedItemSettings current = pendingFeatures.droppedItems();
+        pendingFeatures = pendingFeatures.withDroppedItems(new DroppedItemSettings(current.physics(), current.rotation(), value));
     }
 
     public void setLowFireEnabled(boolean enabled) {

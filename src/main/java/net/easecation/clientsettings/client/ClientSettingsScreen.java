@@ -94,6 +94,7 @@ public final class ClientSettingsScreen {
         addHudCategory(builder, entries, draft);
         addObsOverlayCategory(builder, entries, obsOverlayDraft, saveError);
         addRenderingCategory(builder, entries, draft);
+        addDroppedItemsCategory(builder, entries, draft);
         addServerPermissionsCategory(builder, entries, allowTitle, allowFrame);
 
         builder.setSavingRunnable(() -> {
@@ -723,5 +724,21 @@ public final class ClientSettingsScreen {
                 .setTooltip(Component.translatable("option.ecclientsettings.hit_color.color.tooltip"))
                 .setSaveConsumer(draft::setHitColor)
                 .build());
+    }
+    private static void addDroppedItemsCategory(ConfigBuilder builder, ConfigEntryBuilder entries,
+            ProfileSettingsDraft draft) {
+        ConfigCategory category = builder.getOrCreateCategory(Component.translatable("category.ecclientsettings.dropped_items"));
+        category.addEntry(entries.startBooleanToggle(Component.translatable("option.ecclientsettings.dropped_items.physics"),
+                draft.features().droppedItems().physics()).setDefaultValue(false)
+                .setTooltip(Component.translatable("option.ecclientsettings.dropped_items.physics.tooltip"))
+                .setSaveConsumer(draft::setDroppedItemPhysics).build());
+        category.addEntry(entries.startBooleanToggle(Component.translatable("option.ecclientsettings.dropped_items.rotation"),
+                draft.features().droppedItems().rotation()).setDefaultValue(true)
+                .setTooltip(Component.translatable("option.ecclientsettings.dropped_items.rotation.tooltip"))
+                .setSaveConsumer(draft::setDroppedItemRotation).build());
+        category.addEntry(entries.startBooleanToggle(Component.translatable("option.ecclientsettings.dropped_items.floating"),
+                draft.features().droppedItems().floating()).setDefaultValue(true)
+                .setTooltip(Component.translatable("option.ecclientsettings.dropped_items.floating.tooltip"))
+                .setSaveConsumer(draft::setDroppedItemFloating).build());
     }
 }

@@ -429,5 +429,12 @@
   "option.ecclientsettings.performance.block_model_lod_low": "Low Model Distance (sections)",
   "option.ecclientsettings.performance.block_model_lod_low.tooltip": "Low models are used at or beyond this distance. The band between HIGH and LOW retains the current tier. Invalid pairs fall back to 4/6.",
   "option.ecclientsettings.performance.block_model_lod_rebuilds": "Maximum LOD Rebuilds per Frame",
-  "option.ecclientsettings.performance.block_model_lod_rebuilds.tooltip": "Limits ordinary chunk rebuild submissions caused by movement or settings changes. HIGH restoration always has priority."
+  "option.ecclientsettings.performance.block_model_lod_rebuilds.tooltip": "Limits ordinary chunk rebuild submissions caused by movement or settings changes. HIGH restoration always has priority.",
+  "category.ecclientsettings.dropped_items": "Dropped Items",
+  "option.ecclientsettings.dropped_items.physics": "Physical item rendering",
+  "option.ecclientsettings.dropped_items.rotation": "Item rotation",
+  "option.ecclientsettings.dropped_items.floating": "Item floating",
+  "option.ecclientsettings.dropped_items.physics.tooltip": "Items lie flat and settle on landing. Rotation controls airborne tumbling; display only.",
+  "option.ecclientsettings.dropped_items.rotation.tooltip": "Controls vanilla spin, or airborne tumbling in physical mode. Grounded physical items stay still.",
+  "option.ecclientsettings.dropped_items.floating.tooltip": "Controls bobbing independently of physical mode, respecting the item's own bobbing restriction."
 }

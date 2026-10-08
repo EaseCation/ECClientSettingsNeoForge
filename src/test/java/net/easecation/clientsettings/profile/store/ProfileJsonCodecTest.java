@@ -2,6 +2,7 @@ package net.easecation.clientsettings.profile.store;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.easecation.clientsettings.profile.model.DroppedItemSettings;
 import net.easecation.clientsettings.profile.model.HudSettings;
 import net.easecation.clientsettings.profile.model.HudWidgetId;
 import net.easecation.clientsettings.profile.model.ProfileDefinition;
@@ -19,6 +20,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProfileJsonCodecTest {
 
     private final ProfileJsonCodec codec = new ProfileJsonCodec();
+
+    @Test
+    void droppedItemsRoundTripAllCombinationsAndOldProfilesDefaultToVanilla() throws IOException {
+        for (boolean physics : new boolean[]{false, true}) {
+            for (boolean rotation : new boolean[]{false, true}) {
+                for (boolean floating : new boolean[]{false, true}) {
+                    var settings = new DroppedItemSettings(physics, rotation, floating);
+                    var profile = ProfileDefinition.defaults(false).withFeatures(
+                            ProfileFeatures.DEFAULT.withDroppedItems(settings).withForceSprint(false));
+                    assertEquals(settings, codec.decodeProfile(codec.encodeProfile(profile)).features().droppedItems());
+                    assertEquals(settings, profile.features().withHud(HudSettings.DEFAULT).droppedItems());
+                }
+            }
+        }
+        JsonObject old = encodedProfile(ProfileDefinition.defaults(false));
+        old.getAsJsonObject("features").remove("droppedItems");
+        assertEquals(DroppedItemSettings.DEFAULT,
+                codec.decodeProfile(bytes(old)).features().droppedItems());
+        old.getAsJsonObject("features").add("droppedItems", JsonParser.parseString("{\"rotation\":false}").getAsJsonObject());
+        assertEquals(new DroppedItemSettings(false, false, true),
+                codec.decodeProfile(bytes(old)).features().droppedItems());
+    }
 
     @Test
     void roundTripsProfileAndIndex() throws IOException {
