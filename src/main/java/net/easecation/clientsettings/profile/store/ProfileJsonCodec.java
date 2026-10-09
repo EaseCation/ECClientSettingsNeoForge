@@ -13,6 +13,7 @@ import net.easecation.clientsettings.profile.model.FullbrightMode;
 import net.easecation.clientsettings.profile.model.FullbrightSettings;
 import net.easecation.clientsettings.profile.model.HitColorSettings;
 import net.easecation.clientsettings.profile.model.HudSettings;
+import net.easecation.clientsettings.profile.model.SpeedHudSettings;
 import net.easecation.clientsettings.profile.model.HudTextColorMode;
 import net.easecation.clientsettings.profile.model.HudWidgetId;
 import net.easecation.clientsettings.profile.model.HudWidgetSettings;
@@ -289,6 +290,11 @@ public final class ProfileJsonCodec {
             if (id == HudWidgetId.KEYSTROKES) {
                 widget.add("content", encodeKeystrokes(hud.keystrokes()));
             }
+            if (id == HudWidgetId.SPEED) {
+                JsonObject content = object("horizontalOnly", hud.speed().horizontalOnly());
+                content.addProperty("textTemplate", hud.speed().textTemplate());
+                widget.add("content", content);
+            }
             root.add(id.serializedName(), widget);
         }
         return root;
@@ -331,14 +337,15 @@ public final class ProfileJsonCodec {
 
     private HudSettings decodeHud(JsonObject root) throws IOException {
         requireOnly(root, "hud", Set.of(
-                "armor", "potions", "ping", "fps", "left_cps", "right_cps", "combined_cps", "keystrokes"
+                "armor", "potions", "ping", "fps", "left_cps", "right_cps", "combined_cps", "keystrokes", "speed"
         ));
         Map<HudWidgetId, HudWidgetSettings> widgets = new EnumMap<>(HudWidgetId.class);
         KeystrokesSettings keystrokes = null;
+        SpeedHudSettings speed = SpeedHudSettings.DEFAULT;
         for (HudWidgetId id : HudWidgetId.values()) {
             String field = id.serializedName();
             JsonObject widget = requireObject(root, field);
-            Set<String> fields = id == HudWidgetId.KEYSTROKES
+            Set<String> fields = id == HudWidgetId.KEYSTROKES || id == HudWidgetId.SPEED
                     ? Set.of("enabled", "normalizedX", "normalizedY", "scale", "style", "content")
                     : Set.of("enabled", "normalizedX", "normalizedY", "scale", "style");
             requireOnly(widget, "hud." + field, fields);
@@ -353,8 +360,13 @@ public final class ProfileJsonCodec {
             if (id == HudWidgetId.KEYSTROKES) {
                 keystrokes = decodeKeystrokes(requireObject(widget, "content"));
             }
+            if (id == HudWidgetId.SPEED) {
+                JsonObject content = requireObject(widget, "content");
+                requireOnly(content, "hud.speed.content", Set.of("horizontalOnly", "textTemplate"));
+                speed = new SpeedHudSettings(requireBoolean(content, "horizontalOnly"), requireString(content, "textTemplate"));
+            }
         }
-        return new HudSettings(widgets, keystrokes);
+        return new HudSettings(widgets, keystrokes, speed);
     }
 
     private KeystrokesSettings decodeKeystrokes(JsonObject root) throws IOException {

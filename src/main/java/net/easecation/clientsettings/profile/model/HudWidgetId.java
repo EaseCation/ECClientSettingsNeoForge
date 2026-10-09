@@ -8,7 +8,8 @@ public enum HudWidgetId {
     LEFT_CPS("left_cps"),
     RIGHT_CPS("right_cps"),
     COMBINED_CPS("combined_cps"),
-    KEYSTROKES("keystrokes");
+    KEYSTROKES("keystrokes"),
+    SPEED("speed");
 
     private final String serializedName;
 

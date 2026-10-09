@@ -4,6 +4,7 @@ import net.easecation.clientsettings.feature.hud.widget.ArmorHudWidget;
 import net.easecation.clientsettings.feature.hud.widget.CpsHudWidget;
 import net.easecation.clientsettings.feature.hud.widget.CombinedCpsHudWidget;
 import net.easecation.clientsettings.feature.hud.widget.FpsHudWidget;
+import net.easecation.clientsettings.feature.hud.widget.SpeedHudWidget;
 import net.easecation.clientsettings.feature.hud.widget.KeystrokesHudWidget;
 import net.easecation.clientsettings.feature.hud.widget.PingHudWidget;
 import net.easecation.clientsettings.feature.hud.widget.PotionHudWidget;
@@ -25,6 +26,7 @@ public final class HudWidgetRegistry {
         register(widgets, new PotionHudWidget());
         register(widgets, new PingHudWidget());
         register(widgets, new FpsHudWidget());
+        register(widgets, new SpeedHudWidget());
         register(widgets, CpsHudWidget.left());
         register(widgets, CpsHudWidget.right());
         register(widgets, new CombinedCpsHudWidget());

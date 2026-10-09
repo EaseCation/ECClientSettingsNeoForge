@@ -6,7 +6,8 @@ import java.util.Map;
 
 public record HudSettings(
         Map<HudWidgetId, HudWidgetSettings> widgets,
-        KeystrokesSettings keystrokes
+        KeystrokesSettings keystrokes,
+        SpeedHudSettings speed
 ) {
 
     public static final HudSettings DEFAULT = new HudSettings(Map.of(
@@ -31,6 +32,9 @@ public record HudSettings(
             HudWidgetId.COMBINED_CPS, new HudWidgetSettings(
                     false, 0.0, 0.24, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.COMBINED_CPS)
             ),
+            HudWidgetId.SPEED, new HudWidgetSettings(
+                    false, 0.0, 0.32, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.SPEED)
+            ),
             HudWidgetId.KEYSTROKES, new HudWidgetSettings(
                     false, 0.5, 0.08, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.KEYSTROKES)
             )
@@ -38,6 +42,10 @@ public record HudSettings(
 
     public HudSettings(Map<HudWidgetId, HudWidgetSettings> widgets) {
         this(widgets, KeystrokesSettings.DEFAULT);
+    }
+
+    public HudSettings(Map<HudWidgetId, HudWidgetSettings> widgets, KeystrokesSettings keystrokes) {
+        this(widgets, keystrokes, SpeedHudSettings.DEFAULT);
     }
 
     public HudSettings {
@@ -57,6 +65,7 @@ public record HudSettings(
         }
         widgets = Collections.unmodifiableMap(copy);
         keystrokes = ProfileValidation.requireNonNull(keystrokes, "hud.keystrokes");
+        speed = ProfileValidation.requireNonNull(speed, "hud.speed");
     }
 
     public HudWidgetSettings widget(HudWidgetId id) {
@@ -69,7 +78,7 @@ public record HudSettings(
                 ProfileValidation.requireNonNull(id, "hud.widgetId"),
                 ProfileValidation.requireNonNull(settings, "hud.widget")
         );
-        return new HudSettings(updated, keystrokes);
+        return new HudSettings(updated, keystrokes, speed);
     }
 
     public HudSettings withEnabled(HudWidgetId id, boolean enabled) {
@@ -94,6 +103,9 @@ public record HudSettings(
     }
 
     public HudSettings withKeystrokes(KeystrokesSettings settings) {
-        return new HudSettings(widgets, ProfileValidation.requireNonNull(settings, "hud.keystrokes"));
+        return new HudSettings(widgets, ProfileValidation.requireNonNull(settings, "hud.keystrokes"), speed);
+    }
+    public HudSettings withSpeed(SpeedHudSettings settings) {
+        return new HudSettings(widgets, keystrokes, settings);
     }
 }

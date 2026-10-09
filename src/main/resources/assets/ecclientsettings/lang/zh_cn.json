@@ -463,5 +463,12 @@
   "option.ecclientsettings.held_item_info.background.vanilla": "原版提示框",
   "option.ecclientsettings.held_item_info.background.custom": "自定义背景",
   "option.ecclientsettings.held_item_info.background.none": "无背景",
-  "format.ecclientsettings.held_item_info.omitted": "还有 %s 行…"
+  "format.ecclientsettings.held_item_info.omitted": "还有 %s 行…",
+  "option.ecclientsettings.hud.speed.enabled": "速度 HUD",
+  "option.ecclientsettings.hud.speed.enabled.tooltip": "显示玩家或载具的实际移动速度。",
+  "category.ecclientsettings.speed": "速度显示内容",
+  "option.ecclientsettings.speed.horizontal": "只计算水平速度",
+  "option.ecclientsettings.speed.template": "速度显示文字",
+  "option.ecclientsettings.speed.template.tooltip": "使用 {speed} 插入两位小数速度。例如：{speed} m/s。最多 64 字符。",
+  "option.ecclientsettings.speed.template.error": "请输入不超过 64 字符的单行文字。"
 }

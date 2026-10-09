@@ -25,6 +25,23 @@ class ProfileJsonCodecTest {
     private final ProfileJsonCodec codec = new ProfileJsonCodec();
 
     @Test
+    void speedSettingsRoundTripAndOldProfilesDefaultWithoutLosingOtherHudSettings() throws IOException {
+        var speed = new net.easecation.clientsettings.profile.model.SpeedHudSettings(false, "速度 {speed}");
+        var defaults = ProfileDefinition.defaults(false);
+        var hud = defaults.features().hud().withSpeed(speed).withEnabled(HudWidgetId.SPEED, true)
+                .withLayout(HudWidgetId.SPEED, 0.4, 0.6, 1.5);
+        var profile = defaults.withFeatures(defaults.features().withHud(hud));
+        assertEquals(profile, codec.decodeProfile(codec.encodeProfile(profile)));
+        assertEquals(speed, hud.withKeystrokes(hud.keystrokes()).speed());
+        JsonObject old = encodedProfile(profile);
+        old.getAsJsonObject("features").getAsJsonObject("hud").remove("speed");
+        var decoded = codec.decodeProfile(bytes(old)).features().hud();
+        assertEquals(net.easecation.clientsettings.profile.model.SpeedHudSettings.DEFAULT, decoded.speed());
+        assertEquals(HudSettings.DEFAULT.widget(HudWidgetId.SPEED), decoded.widget(HudWidgetId.SPEED));
+        assertEquals(hud.widget(HudWidgetId.ARMOR), decoded.widget(HudWidgetId.ARMOR));
+    }
+
+    @Test
     void heldItemInformationPersistsAndMissingSettingsKeepVanilla() throws IOException {
         var settings = HeldItemInfoSettings.DEFAULT.withEnabled(true).withShowName(false)
                 .withShowDescription(false).withShowEnchantments(false).withShowAdditional(false)

@@ -176,8 +176,32 @@ final class HudStyleScreen {
         category.addEntry(borderWidth);
         category.addEntry(padding);
 
+        java.util.function.Supplier<net.easecation.clientsettings.profile.model.SpeedHudSettings> speedSettings =
+                () -> draft.hudSettings().speed();
+        if (id == HudWidgetId.SPEED) {
+            var speedCategory = builder.getOrCreateCategory(Component.translatable("category.ecclientsettings.speed"));
+            var horizontal = entries.startBooleanToggle(Component.translatable("option.ecclientsettings.speed.horizontal"),
+                    draft.hudSettings().speed().horizontalOnly()).setDefaultValue(true).build();
+            var template = entries.startStrField(Component.translatable("option.ecclientsettings.speed.template"),
+                    draft.hudSettings().speed().textTemplate()).setDefaultValue("{speed} m/s")
+                    .setTooltip(Component.translatable("option.ecclientsettings.speed.template.tooltip"))
+                    .setErrorSupplier(value -> {
+                        try {
+                            new net.easecation.clientsettings.profile.model.SpeedHudSettings(true, value);
+                            return java.util.Optional.empty();
+                        } catch (IllegalArgumentException exception) {
+                            return java.util.Optional.of(Component.translatable("option.ecclientsettings.speed.template.error"));
+                        }
+                    }).build();
+            speedCategory.addEntry(horizontal);
+            speedCategory.addEntry(template);
+            speedSettings = () -> new net.easecation.clientsettings.profile.model.SpeedHudSettings(
+                    horizontal.getValue(), template.getValue());
+        }
+        var pendingSpeed = speedSettings;
         builder.setSavingRunnable(() -> {
             draft.setHudStyle(id, style.materialize());
+            if (id == HudWidgetId.SPEED) draft.setSpeedSettings(pendingSpeed.get());
             if (keystrokes != null) {
                 draft.setKeystrokesSettings(keystrokes.materialize());
             }

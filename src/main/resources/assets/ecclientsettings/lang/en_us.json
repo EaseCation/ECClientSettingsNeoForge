@@ -463,5 +463,12 @@
   "option.ecclientsettings.held_item_info.background.vanilla": "Vanilla tooltip",
   "option.ecclientsettings.held_item_info.background.custom": "Custom background",
   "option.ecclientsettings.held_item_info.background.none": "No background",
-  "format.ecclientsettings.held_item_info.omitted": "%s more lines…"
+  "format.ecclientsettings.held_item_info.omitted": "%s more lines…",
+  "option.ecclientsettings.hud.speed.enabled": "Speed HUD",
+  "option.ecclientsettings.hud.speed.enabled.tooltip": "Shows player or vehicle movement speed.",
+  "category.ecclientsettings.speed": "Speed content",
+  "option.ecclientsettings.speed.horizontal": "Horizontal speed only",
+  "option.ecclientsettings.speed.template": "Speed display text",
+  "option.ecclientsettings.speed.template.tooltip": "Use {speed} for speed with two decimals, e.g. {speed} m/s. Maximum 64 characters.",
+  "option.ecclientsettings.speed.template.error": "Enter one line of at most 64 characters."
 }

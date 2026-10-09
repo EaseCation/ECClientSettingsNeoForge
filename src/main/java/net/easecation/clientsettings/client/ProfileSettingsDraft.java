@@ -263,6 +263,10 @@ public final class ProfileSettingsDraft {
         setHudSettings(hudSettings().withStyle(id, style));
     }
 
+    public void setSpeedSettings(net.easecation.clientsettings.profile.model.SpeedHudSettings settings) {
+        setHudSettings(hudSettings().withSpeed(settings));
+    }
+
     public void setKeystrokesSettings(KeystrokesSettings settings) {
         setHudSettings(hudSettings().withKeystrokes(settings));
     }
