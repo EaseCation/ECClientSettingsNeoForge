@@ -1,35 +1,30 @@
 package net.easecation.clientsettings.client;
 
 import me.shedaniel.clothconfig2.gui.entries.TextListEntry;
-import me.shedaniel.clothconfig2.api.AbstractConfigEntry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-import java.util.List;
-import java.util.Objects;
 
 @SuppressWarnings("deprecation")
 final class HudEditorEntry extends TextListEntry {
 
     private final ProfileSettingsDraft draft;
-    private final List<AbstractConfigEntry<?>> hudControls;
     private int entryX;
     private int entryY;
     private int entryWidth;
     private int entryHeight;
     private boolean hasRenderedBounds;
 
-    HudEditorEntry(ProfileSettingsDraft draft, List<AbstractConfigEntry<?>> hudControls) {
+    HudEditorEntry(ProfileSettingsDraft draft) {
         super(
                 Component.translatable("option.ecclientsettings.hud.edit_layout"),
                 Component.translatable("option.ecclientsettings.hud.edit_layout.action")
                         .withStyle(ChatFormatting.YELLOW, ChatFormatting.UNDERLINE)
         );
         this.draft = draft;
-        this.hudControls = Objects.requireNonNull(hudControls, "HUD controls");
     }
 
     @Override
@@ -69,7 +64,6 @@ final class HudEditorEntry extends TextListEntry {
             Minecraft minecraft = Minecraft.getInstance();
             Screen clothScreen = minecraft.screen;
             if (clothScreen != null) {
-                hudControls.forEach(AbstractConfigEntry::save);
                 minecraft.setScreen(new HudEditorScreen(clothScreen, draft));
                 return true;
             }

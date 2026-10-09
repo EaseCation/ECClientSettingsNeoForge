@@ -85,7 +85,7 @@ public final class HudEditorScreen extends Screen {
 
     @Override
     protected void init() {
-        int buttonCount = standalone ? 5 : 4;
+        int buttonCount = standalone ? 6 : 5;
         paletteWidth = Math.min(174, Math.max(120, this.width - 24));
         paletteHeight = PALETTE_PADDING * 2
                 + buttonCount * BUTTON_HEIGHT
@@ -114,6 +114,12 @@ public final class HudEditorScreen extends Screen {
                 Component.translatable("button.ecclientsettings.hud.edit_style"),
                 y,
                 button -> openSelectedStyle()
+        );
+        y += BUTTON_HEIGHT + BUTTON_GAP;
+        addPaletteButton(
+                Component.translatable("button.ecclientsettings.hud.reset_layout"),
+                y,
+                button -> resetLayout()
         );
         y += BUTTON_HEIGHT + BUTTON_GAP;
         addPaletteButton(CommonComponents.GUI_CANCEL, y, button -> cancelAndClose());

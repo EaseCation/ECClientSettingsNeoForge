@@ -5,7 +5,7 @@
   "button.ecclientsettings.hud.edit_style": "Edit Selected Style",
   "button.ecclientsettings.hud.disable_selected": "Disable Selected Widget",
   "button.ecclientsettings.hud.enable_selected": "Enable Selected Widget",
-  "button.ecclientsettings.hud.reset_layout": "Reset Layout",
+  "button.ecclientsettings.hud.reset_layout": "Reset All Layouts",
   "button.ecclientsettings.hud.reset_selected": "Reset Selected Position",
   "button.ecclientsettings.hud.save_exit": "Save and Exit",
   "button.ecclientsettings.hud.snapping_off": "Snapping: Off",

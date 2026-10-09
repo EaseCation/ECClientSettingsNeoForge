@@ -15,7 +15,7 @@ public record HudSettings(
                     false, 1.0, 1.0, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.ARMOR)
             ),
             HudWidgetId.POTIONS, new HudWidgetSettings(
-                    false, 0.0, 0.25, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.POTIONS)
+                    false, 1.0, 0.35, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.POTIONS)
             ),
             HudWidgetId.PING, new HudWidgetSettings(
                     false, 1.0, 0.0, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.PING)

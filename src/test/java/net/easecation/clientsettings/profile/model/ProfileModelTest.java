@@ -41,7 +41,7 @@ class ProfileModelTest {
                 false, 1.0, 1.0, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.ARMOR)
         ), hud.widget(HudWidgetId.ARMOR));
         assertEquals(new HudWidgetSettings(
-                false, 0.0, 0.25, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.POTIONS)
+                false, 1.0, 0.35, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.POTIONS)
         ), hud.widget(HudWidgetId.POTIONS));
         assertEquals(new HudWidgetSettings(
                 false, 1.0, 0.0, 1.0, HudWidgetStyle.defaultsFor(HudWidgetId.PING)

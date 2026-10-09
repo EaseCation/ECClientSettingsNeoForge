@@ -5,7 +5,7 @@
   "button.ecclientsettings.hud.edit_style": "编辑所选样式",
   "button.ecclientsettings.hud.disable_selected": "禁用所选组件",
   "button.ecclientsettings.hud.enable_selected": "启用所选组件",
-  "button.ecclientsettings.hud.reset_layout": "重置布局",
+  "button.ecclientsettings.hud.reset_layout": "重置全部布局",
   "button.ecclientsettings.hud.reset_selected": "重置所选位置",
   "button.ecclientsettings.hud.save_exit": "保存并退出",
   "button.ecclientsettings.hud.snapping_off": "吸附：关",

@@ -27,6 +27,44 @@ class ProfileSettingsDraftTest {
     Path temporaryDirectory;
 
     @Test
+    void hudControlReadsNestedEditorChangesAndFinalSaveKeepsThem() throws IOException {
+        ProfileManager profiles = manager();
+        ProfileSettingsDraft draft = ProfileSettingsDraft.active(profiles);
+        var control = new HudEnabledBinding(draft, HudWidgetId.SPEED);
+        assertFalse(control.value());
+        draft.setHudEnabled(HudWidgetId.SPEED, true);
+        assertTrue(control.value());
+        assertTrue(control.edited());
+        draft.setForceSprint(false);
+        draft.save(profiles);
+        assertTrue(manager().activeSnapshot().features().hud().widget(HudWidgetId.SPEED).enabled());
+        assertFalse(manager().activeSnapshot().features().forceSprint().enabled());
+        control.toggle();
+        draft.save(profiles);
+        assertFalse(manager().activeSnapshot().features().hud().widget(HudWidgetId.SPEED).enabled());
+    }
+
+    @Test
+    void hudCancelRestoresEntrySnapshotAndResetKeepsLayoutAndStyle() throws IOException {
+        ProfileSettingsDraft draft = ProfileSettingsDraft.active(manager());
+        var control = new HudEnabledBinding(draft, HudWidgetId.FPS);
+        control.toggle();
+        var beforeEditor = draft.hudSettings();
+        draft.setHudEnabled(HudWidgetId.FPS, false);
+        draft.setHudLayout(HudWidgetId.FPS, 0.4, 0.6, 1.5);
+        draft.restoreHudSettings(beforeEditor);
+        assertTrue(control.value());
+        assertEquals(beforeEditor, draft.hudSettings());
+        draft.setHudLayout(HudWidgetId.FPS, 0.4, 0.6, 1.5);
+        var layout = draft.hudSettings().widget(HudWidgetId.FPS);
+        control.reset();
+        assertFalse(control.value());
+        assertFalse(control.edited());
+        assertEquals(layout.normalizedX(), draft.hudSettings().widget(HudWidgetId.FPS).normalizedX());
+        assertEquals(layout.style(), draft.hudSettings().widget(HudWidgetId.FPS).style());
+    }
+
+    @Test
     void draftDoesNotMutateProfileUntilSave() throws IOException {
         ProfileManager profiles = manager();
         ProfileSettingsDraft draft = ProfileSettingsDraft.active(profiles);

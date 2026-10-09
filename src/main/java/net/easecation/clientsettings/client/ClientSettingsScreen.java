@@ -1,6 +1,5 @@
 package net.easecation.clientsettings.client;
 
-import me.shedaniel.clothconfig2.api.AbstractConfigEntry;
 import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
@@ -36,7 +35,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -488,22 +486,9 @@ public final class ClientSettingsScreen {
         category.addEntry(entries.startTextDescription(
                 Component.translatable("option.ecclientsettings.hud.description")
         ).build());
-        List<AbstractConfigEntry<?>> hudControls = new ArrayList<>();
-        category.addEntry(new HudEditorEntry(draft, hudControls));
+        category.addEntry(new HudEditorEntry(draft));
         for (HudWidgetId id : HudWidgetId.values()) {
-            String name = id.serializedName();
-            var enabledControl = entries.startBooleanToggle(
-                            Component.translatable("option.ecclientsettings.hud." + name + ".enabled"),
-                            draft.hudSettings().widget(id).enabled()
-                    )
-                    .setDefaultValue(HudSettings.DEFAULT.widget(id).enabled())
-                    .setTooltip(Component.translatable(
-                            "option.ecclientsettings.hud." + name + ".enabled.tooltip"
-                    ))
-                    .setSaveConsumer(enabled -> draft.setHudEnabled(id, enabled))
-                    .build();
-            hudControls.add(enabledControl);
-            category.addEntry(enabledControl);
+            category.addEntry(new HudEnabledEntry(draft, id));
         }
     }
 
