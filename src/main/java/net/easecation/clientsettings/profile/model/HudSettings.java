@@ -7,7 +7,8 @@ import java.util.Map;
 public record HudSettings(
         Map<HudWidgetId, HudWidgetSettings> widgets,
         KeystrokesSettings keystrokes,
-        SpeedHudSettings speed
+        SpeedHudSettings speed,
+        PotionHudSettings potions
 ) {
 
     public static final HudSettings DEFAULT = new HudSettings(Map.of(
@@ -48,6 +49,11 @@ public record HudSettings(
         this(widgets, keystrokes, SpeedHudSettings.DEFAULT);
     }
 
+    public HudSettings(Map<HudWidgetId, HudWidgetSettings> widgets, KeystrokesSettings keystrokes,
+            SpeedHudSettings speed) {
+        this(widgets, keystrokes, speed, PotionHudSettings.DEFAULT);
+    }
+
     public HudSettings {
         ProfileValidation.requireNonNull(widgets, "hud.widgets");
         EnumMap<HudWidgetId, HudWidgetSettings> copy = new EnumMap<>(HudWidgetId.class);
@@ -66,6 +72,7 @@ public record HudSettings(
         widgets = Collections.unmodifiableMap(copy);
         keystrokes = ProfileValidation.requireNonNull(keystrokes, "hud.keystrokes");
         speed = ProfileValidation.requireNonNull(speed, "hud.speed");
+        potions = ProfileValidation.requireNonNull(potions, "hud.potions");
     }
 
     public HudWidgetSettings widget(HudWidgetId id) {
@@ -78,7 +85,7 @@ public record HudSettings(
                 ProfileValidation.requireNonNull(id, "hud.widgetId"),
                 ProfileValidation.requireNonNull(settings, "hud.widget")
         );
-        return new HudSettings(updated, keystrokes, speed);
+        return new HudSettings(updated, keystrokes, speed, potions);
     }
 
     public HudSettings withEnabled(HudWidgetId id, boolean enabled) {
@@ -103,9 +110,12 @@ public record HudSettings(
     }
 
     public HudSettings withKeystrokes(KeystrokesSettings settings) {
-        return new HudSettings(widgets, ProfileValidation.requireNonNull(settings, "hud.keystrokes"), speed);
+        return new HudSettings(widgets, ProfileValidation.requireNonNull(settings, "hud.keystrokes"), speed, potions);
     }
     public HudSettings withSpeed(SpeedHudSettings settings) {
-        return new HudSettings(widgets, keystrokes, settings);
+        return new HudSettings(widgets, keystrokes, settings, potions);
+    }
+    public HudSettings withPotions(PotionHudSettings settings) {
+        return new HudSettings(widgets, keystrokes, speed, settings);
     }
 }

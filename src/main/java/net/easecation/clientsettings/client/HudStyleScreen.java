@@ -149,10 +149,16 @@ final class HudStyleScreen {
                 rainbowSpread.getValue()
         );
 
+        Supplier<net.easecation.clientsettings.profile.model.PotionHudSettings> livePotions =
+                id == HudWidgetId.POTIONS ? PotionHudCategory.add(builder, entries, draft.hudSettings().potions(), draft.hudSettings(), liveStyle)
+                : () -> draft.hudSettings().potions();
+
         category.addEntry(entries.startTextDescription(
                 Component.translatable("option.ecclientsettings.hud_style.description")
         ).build());
-        if (keystrokes == null) {
+        if (id == HudWidgetId.POTIONS) {
+            category.addEntry(new PotionStylePreviewEntry(draft.hudSettings(), liveStyle, livePotions));
+        } else if (keystrokes == null) {
             category.addEntry(new HudStylePreviewEntry(id, liveStyle));
         } else {
             addKeystrokesCategory(
@@ -201,6 +207,7 @@ final class HudStyleScreen {
         var pendingSpeed = speedSettings;
         builder.setSavingRunnable(() -> {
             draft.setHudStyle(id, style.materialize());
+            if (id == HudWidgetId.POTIONS) draft.setPotionSettings(livePotions.get());
             if (id == HudWidgetId.SPEED) draft.setSpeedSettings(pendingSpeed.get());
             if (keystrokes != null) {
                 draft.setKeystrokesSettings(keystrokes.materialize());

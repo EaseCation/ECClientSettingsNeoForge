@@ -25,6 +25,32 @@ class ProfileJsonCodecTest {
     private final ProfileJsonCodec codec = new ProfileJsonCodec();
 
     @Test
+    void potionSettingsAreIndependentAndOldProfilesGetCompleteDefaults() throws IOException {
+        var settings = net.easecation.clientsettings.profile.model.PotionHudSettings.DEFAULT
+                .withHideVanilla(true).withVanillaLevel(true).withVanillaTime(true)
+                .withVanillaLevelColor(ArgbColor.parse("#80440011")).withVanillaTimeColor(ArgbColor.parse("#CC223344"))
+                .withShowName(false).withShowLevel(false).withShowTime(false).withEffectNameColor(true)
+                .withLevelColor(ArgbColor.parse("#88446688")).withTimeColor(ArgbColor.parse("#CC668899"))
+                .withWarningEnabled(false).withWarningSeconds(35);
+        var defaults = ProfileDefinition.defaults(false);
+        var hud = defaults.features().hud().withPotions(settings).withEnabled(HudWidgetId.POTIONS, false);
+        var profile = defaults.withFeatures(defaults.features().withHud(hud));
+        assertEquals(profile, codec.decodeProfile(codec.encodeProfile(profile)));
+        assertEquals(settings, hud.withSpeed(hud.speed()).withKeystrokes(hud.keystrokes()).potions());
+        assertEquals(settings, hud.withEnabled(HudWidgetId.POTIONS, true).potions());
+        JsonObject old = encodedProfile(profile);
+        old.getAsJsonObject("features").getAsJsonObject("hud").getAsJsonObject("potions").remove("content");
+        assertEquals(net.easecation.clientsettings.profile.model.PotionHudSettings.DEFAULT,
+                codec.decodeProfile(bytes(old)).features().hud().potions());
+        var partial = JsonParser.parseString("{\"showName\":false}").getAsJsonObject();
+        old.getAsJsonObject("features").getAsJsonObject("hud").getAsJsonObject("potions").add("content", partial);
+        assertEquals(net.easecation.clientsettings.profile.model.PotionHudSettings.DEFAULT.withShowName(false),
+                codec.decodeProfile(bytes(old)).features().hud().potions());
+        partial.addProperty("warningSeconds", 0);
+        assertThrows(IOException.class, () -> codec.decodeProfile(bytes(old)));
+    }
+
+    @Test
     void speedSettingsRoundTripAndOldProfilesDefaultWithoutLosingOtherHudSettings() throws IOException {
         var speed = new net.easecation.clientsettings.profile.model.SpeedHudSettings(false, "速度 {speed}");
         var defaults = ProfileDefinition.defaults(false);

@@ -17,7 +17,8 @@
     "render.ScreenEffectRendererMixin",
     "render.ItemEntityRenderStateMixin",
     "render.ItemEntityRendererMixin",
-    "render.HeldItemInfoGuiMixin"
+    "render.HeldItemInfoGuiMixin",
+    "render.PotionEffectsGuiMixin"
   ],
   "injectors": {
     "defaultRequire": 1

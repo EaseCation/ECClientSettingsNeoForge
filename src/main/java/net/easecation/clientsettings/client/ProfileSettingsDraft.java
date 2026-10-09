@@ -263,6 +263,10 @@ public final class ProfileSettingsDraft {
         setHudSettings(hudSettings().withStyle(id, style));
     }
 
+    public void setPotionSettings(net.easecation.clientsettings.profile.model.PotionHudSettings settings) {
+        setHudSettings(hudSettings().withPotions(settings));
+    }
+
     public void setSpeedSettings(net.easecation.clientsettings.profile.model.SpeedHudSettings settings) {
         setHudSettings(hudSettings().withSpeed(settings));
     }

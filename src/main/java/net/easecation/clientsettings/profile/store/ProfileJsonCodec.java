@@ -14,6 +14,7 @@ import net.easecation.clientsettings.profile.model.FullbrightSettings;
 import net.easecation.clientsettings.profile.model.HitColorSettings;
 import net.easecation.clientsettings.profile.model.HudSettings;
 import net.easecation.clientsettings.profile.model.SpeedHudSettings;
+import net.easecation.clientsettings.profile.model.PotionHudSettings;
 import net.easecation.clientsettings.profile.model.HudTextColorMode;
 import net.easecation.clientsettings.profile.model.HudWidgetId;
 import net.easecation.clientsettings.profile.model.HudWidgetSettings;
@@ -295,6 +296,23 @@ public final class ProfileJsonCodec {
                 content.addProperty("textTemplate", hud.speed().textTemplate());
                 widget.add("content", content);
             }
+            if (id == HudWidgetId.POTIONS) {
+                JsonObject content = new JsonObject();
+                content.addProperty("hideVanilla", hud.potions().hideVanilla());
+                content.addProperty("vanillaLevel", hud.potions().vanillaLevel());
+                content.addProperty("vanillaTime", hud.potions().vanillaTime());
+                content.addProperty("vanillaLevelColor", hud.potions().vanillaLevelColor().serialized());
+                content.addProperty("vanillaTimeColor", hud.potions().vanillaTimeColor().serialized());
+                content.addProperty("showName", hud.potions().showName());
+                content.addProperty("showLevel", hud.potions().showLevel());
+                content.addProperty("showTime", hud.potions().showTime());
+                content.addProperty("effectNameColor", hud.potions().effectNameColor());
+                content.addProperty("levelColor", hud.potions().levelColor().serialized());
+                content.addProperty("timeColor", hud.potions().timeColor().serialized());
+                content.addProperty("warningEnabled", hud.potions().warningEnabled());
+                content.addProperty("warningSeconds", hud.potions().warningSeconds());
+                widget.add("content", content);
+            }
             root.add(id.serializedName(), widget);
         }
         return root;
@@ -342,10 +360,11 @@ public final class ProfileJsonCodec {
         Map<HudWidgetId, HudWidgetSettings> widgets = new EnumMap<>(HudWidgetId.class);
         KeystrokesSettings keystrokes = null;
         SpeedHudSettings speed = SpeedHudSettings.DEFAULT;
+        PotionHudSettings potions = PotionHudSettings.DEFAULT;
         for (HudWidgetId id : HudWidgetId.values()) {
             String field = id.serializedName();
             JsonObject widget = requireObject(root, field);
-            Set<String> fields = id == HudWidgetId.KEYSTROKES || id == HudWidgetId.SPEED
+            Set<String> fields = id == HudWidgetId.KEYSTROKES || id == HudWidgetId.SPEED || id == HudWidgetId.POTIONS
                     ? Set.of("enabled", "normalizedX", "normalizedY", "scale", "style", "content")
                     : Set.of("enabled", "normalizedX", "normalizedY", "scale", "style");
             requireOnly(widget, "hud." + field, fields);
@@ -360,13 +379,31 @@ public final class ProfileJsonCodec {
             if (id == HudWidgetId.KEYSTROKES) {
                 keystrokes = decodeKeystrokes(requireObject(widget, "content"));
             }
+            if (id == HudWidgetId.POTIONS) {
+                JsonObject content = requireObject(widget, "content");
+                requireOnly(content, "hud.potions.content", Set.of("hideVanilla", "vanillaLevel", "vanillaTime", "vanillaLevelColor", "vanillaTimeColor", "showName", "showLevel", "showTime", "effectNameColor", "levelColor", "timeColor", "warningEnabled", "warningSeconds"));
+                potions = new PotionHudSettings(
+                        requireBoolean(content, "hideVanilla"),
+                        requireBoolean(content, "vanillaLevel"),
+                        requireBoolean(content, "vanillaTime"),
+                        ArgbColor.parse(requireString(content, "vanillaLevelColor")),
+                        ArgbColor.parse(requireString(content, "vanillaTimeColor")),
+                        requireBoolean(content, "showName"),
+                        requireBoolean(content, "showLevel"),
+                        requireBoolean(content, "showTime"),
+                        requireBoolean(content, "effectNameColor"),
+                        ArgbColor.parse(requireString(content, "levelColor")),
+                        ArgbColor.parse(requireString(content, "timeColor")),
+                        requireBoolean(content, "warningEnabled"),
+                        requireInt(content, "warningSeconds"));
+            }
             if (id == HudWidgetId.SPEED) {
                 JsonObject content = requireObject(widget, "content");
                 requireOnly(content, "hud.speed.content", Set.of("horizontalOnly", "textTemplate"));
                 speed = new SpeedHudSettings(requireBoolean(content, "horizontalOnly"), requireString(content, "textTemplate"));
             }
         }
-        return new HudSettings(widgets, keystrokes, speed);
+        return new HudSettings(widgets, keystrokes, speed, potions);
     }
 
     private KeystrokesSettings decodeKeystrokes(JsonObject root) throws IOException {
