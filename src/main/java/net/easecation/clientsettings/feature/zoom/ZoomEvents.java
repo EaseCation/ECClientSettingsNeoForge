@@ -29,6 +29,7 @@ public final class ZoomEvents implements ProfileParticipant {
     }
 
     public static void onClientTick(ClientTickEvent.Post event) {
+        if (!ProfileServices.isReady()) return;
         ensureParticipantRegistered();
         ZoomSettings settings = settings();
         boolean clicked = ClientSettingsKeyMappings.ZOOM.consumeClick();
@@ -69,6 +70,7 @@ public final class ZoomEvents implements ProfileParticipant {
     }
 
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
+        if (!ProfileServices.isReady()) return;
         ZoomSettings settings = settings();
         boolean validContext = validContext();
         syncInput(settings, validContext);
@@ -136,7 +138,7 @@ public final class ZoomEvents implements ProfileParticipant {
     private static boolean validContext() {
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
-        return minecraft.screen == null
+        return ProfileServices.isReady() && minecraft.screen == null
                 && minecraft.level != null
                 && minecraft.level == trackedLevel
                 && player != null

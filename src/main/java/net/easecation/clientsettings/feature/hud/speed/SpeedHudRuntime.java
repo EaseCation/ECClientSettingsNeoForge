@@ -13,8 +13,11 @@ public final class SpeedHudRuntime {
     private SpeedHudRuntime() {}
     public static void onClientTick(ClientTickEvent.Post event) {
         var mc = Minecraft.getInstance();
+        if (!ProfileServices.isReady() || mc.player == null || mc.level == null) {
+            SAMPLER.clear(); previous = null; return;
+        }
         var hud = ProfileServices.active().features().hud();
-        if (mc.player == null || mc.level == null || !hud.widget(HudWidgetId.SPEED).enabled()) {
+        if (!hud.widget(HudWidgetId.SPEED).enabled()) {
             SAMPLER.clear(); previous = null; return;
         }
         if (mc.isPaused()) return;

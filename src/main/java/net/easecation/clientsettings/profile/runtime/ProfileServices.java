@@ -1,11 +1,13 @@
 package net.easecation.clientsettings.profile.runtime;
 
 import net.easecation.clientsettings.ECClientSettings;
+import net.easecation.clientsettings.config.ClientSettingsConfig;
 import net.easecation.clientsettings.profile.migration.ClientConfigMigrationState;
 import net.easecation.clientsettings.profile.migration.ProfileBootstrap;
 import net.easecation.clientsettings.profile.model.ProfileDefinition;
 import net.easecation.clientsettings.profile.store.ProfileStore;
 import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.fml.event.config.ModConfigEvent;
 
 import java.nio.file.Path;
 
@@ -18,14 +20,24 @@ public final class ProfileServices {
 
     public static ProfileManager manager() {
         ProfileManager current = manager;
-        if (current != null) {
-            return current;
+        if (current == null) {
+            throw new IllegalStateException("Profile storage is not ready before client configuration loads");
+        }
+        return current;
+    }
+
+    public static boolean isReady() {
+        return manager != null;
+    }
+
+    public static void onConfigLoading(ModConfigEvent.Loading event) {
+        if (event.getConfig().getSpec() != ClientSettingsConfig.SPEC) {
+            return;
         }
         synchronized (ProfileServices.class) {
             if (manager == null) {
                 manager = loadManager();
             }
-            return manager;
         }
     }
 

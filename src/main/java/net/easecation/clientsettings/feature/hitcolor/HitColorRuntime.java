@@ -25,7 +25,7 @@ public final class HitColorRuntime implements ProfileParticipant {
     }
 
     public static void onClientTick(ClientTickEvent.Post event) {
-        if (stopping) {
+        if (stopping || !ProfileServices.isReady()) {
             return;
         }
         ensureParticipantRegistered();

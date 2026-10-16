@@ -23,6 +23,7 @@ public final class TimeChangerRuntime implements ProfileParticipant {
     }
 
     public static void onClientTick(ClientTickEvent.Post event) {
+        if (!ProfileServices.isReady()) return;
         ClientLevel level = Minecraft.getInstance().level;
         if (level != trackedLevel) {
             trackedLevel = level;

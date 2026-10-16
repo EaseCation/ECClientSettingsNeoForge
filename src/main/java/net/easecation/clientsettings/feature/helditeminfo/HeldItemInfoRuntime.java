@@ -34,8 +34,9 @@ public final class HeldItemInfoRuntime {
 
     public static void tick() {
         Minecraft mc = Minecraft.getInstance();
+        if (!ProfileServices.isReady() || mc.player == null || mc.level == null) { clear(); return; }
         HeldItemInfoSettings settings = ProfileServices.active().features().heldItemInfo();
-        if (!settings.enabled() || mc.player == null || mc.level == null) { clear(); return; }
+        if (!settings.enabled()) { clear(); return; }
         ItemStack selected = mc.player.getMainHandItem();
         int slot = mc.player.getInventory().getSelectedSlot();
         if (selected.isEmpty()) { clear(); return; }
@@ -77,6 +78,7 @@ public final class HeldItemInfoRuntime {
     /** Called in the existing selected-item GUI layer; its F1/spectator rules remain authoritative. */
     public static void render(GuiGraphics graphics, int yShift) {
         Minecraft mc = Minecraft.getInstance();
+        if (!ProfileServices.isReady() || mc.player == null || mc.level == null) return;
         HeldItemInfoSettings settings = ProfileServices.active().features().heldItemInfo();
         if (mc.player == null || mc.level == null || mc.options.hideGui || previous.isEmpty()
                 || !settings.equals(previousSettings)) return;

@@ -18,7 +18,7 @@ abstract class HeldItemInfoGuiMixin {
 
     @Inject(method = "renderSelectedItemName(Lnet/minecraft/client/gui/GuiGraphics;I)V", at = @At("HEAD"), cancellable = true)
     private void ecclientsettings$heldItemInfo(GuiGraphics graphics, int yShift, CallbackInfo ci) {
-        if (ProfileServices.active().features().heldItemInfo().enabled()) {
+        if (ProfileServices.isReady() && ProfileServices.active().features().heldItemInfo().enabled()) {
             HeldItemInfoRuntime.render(graphics, yShift);
             ci.cancel();
         }

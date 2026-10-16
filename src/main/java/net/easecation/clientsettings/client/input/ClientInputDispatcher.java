@@ -24,6 +24,7 @@ public final class ClientInputDispatcher {
     }
 
     public static void onClientTick(ClientTickEvent.Post event) {
+        if (!ProfileServices.isReady()) return;
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.screen != null) {
             return;

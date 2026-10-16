@@ -18,6 +18,7 @@ import net.easecation.clientsettings.feature.performance.InitialRenderDistanceCo
 import net.easecation.clientsettings.feature.timechanger.TimeChangerRuntime;
 import net.easecation.clientsettings.feature.zoom.ZoomEvents;
 import net.easecation.clientsettings.window.WindowAppearanceEvents;
+import net.easecation.clientsettings.profile.runtime.ProfileServices;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
@@ -44,6 +45,7 @@ public final class ECClientSettings {
         modEventBus.addListener(ObsOverlayConfig::onLoading);
         modEventBus.addListener(ObsOverlayConfig::onReloading);
         modEventBus.addListener(ObsOverlayConfig::onUnloading);
+        modEventBus.addListener(ProfileServices::onConfigLoading);
 
         NeoForge.EVENT_BUS.addListener(ClientInputDispatcher::onClientTick);
         NeoForge.EVENT_BUS.addListener(TimeChangerRuntime::onClientTick);
