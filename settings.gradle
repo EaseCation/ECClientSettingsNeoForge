@@ -12,3 +12,11 @@ plugins {
 
 rootProject.name = 'ECClientSettingsNeoForge'
 
+
+includeBuild("../NeteaseBridge") {
+    dependencySubstitution {
+        substitute module("net.easecation:easecation-async-logging") using project(":easecation-async-logging")
+        substitute module("net.easecation:netease-bridge-client-common") using project(":netease-bridge-client-common")
+        substitute module("net.easecation:netease-bridge-client-neoforge") using project(":netease-bridge-client-neoforge")
+    }
+}

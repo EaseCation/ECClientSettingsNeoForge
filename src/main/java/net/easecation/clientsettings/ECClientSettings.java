@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 public final class ECClientSettings {
 
     public static final String MOD_ID = "ecclientsettings";
-    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    public static final Logger LOGGER = net.easecation.logging.AsyncLogger.wrap(LoggerFactory.getLogger(MOD_ID));
 
     public ECClientSettings(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.CLIENT, ClientSettingsConfig.SPEC);

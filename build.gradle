@@ -19,6 +19,8 @@ base {
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 dependencies {
+    implementation "net.easecation:easecation-async-logging:1.0.0"
+    jarJar "net.easecation:easecation-async-logging:1.0.0"
     implementation "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}"
     implementation "net.easecation:netease-bridge-client-neoforge:1.0.0"
     implementation "net.easecation:netease-bridge-client-common:1.0.0"
@@ -84,4 +86,9 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// ModDev creates this configuration when unitTest is enabled above.
+dependencies {
+    additionalRuntimeClasspath "net.easecation:easecation-async-logging:1.0.0"
 }
