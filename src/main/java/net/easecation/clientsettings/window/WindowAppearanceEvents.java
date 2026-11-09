@@ -18,19 +18,24 @@ public final class WindowAppearanceEvents {
         if (!WindowAppearanceProtocol.isWindowSystem(modEvent.namespace(), modEvent.system())) {
             return;
         }
-
-        switch (modEvent.eventName()) {
-            case WindowAppearanceProtocol.SET_APPEARANCE_EVENT -> handleSet(modEvent.data());
-            case WindowAppearanceProtocol.RESET_APPEARANCE_EVENT -> {
-                ParseResult<Boolean> result = WindowAppearanceParser.parseReset(modEvent.data());
-                if (result.successful()) {
-                    WindowAppearanceController.getInstance().reset();
-                } else {
-                    logInvalid(result.error());
+        var ecPerf = net.minecraft.util.profiling.Profiler.get();
+        ecPerf.push("ec:ecclientsettings/window_rpc_apply");
+        try {
+            switch (modEvent.eventName()) {
+                case WindowAppearanceProtocol.SET_APPEARANCE_EVENT -> handleSet(modEvent.data());
+                case WindowAppearanceProtocol.RESET_APPEARANCE_EVENT -> {
+                    ParseResult<Boolean> result = WindowAppearanceParser.parseReset(modEvent.data());
+                    if (result.successful()) {
+                        WindowAppearanceController.getInstance().reset();
+                    } else {
+                        logInvalid(result.error());
+                    }
+                }
+                default -> {
                 }
             }
-            default -> {
-            }
+        } finally {
+            ecPerf.pop();
         }
     }
 

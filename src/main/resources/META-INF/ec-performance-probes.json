@@ -1,0 +1,22 @@
+{
+  "schema": "ec-scopes/1",
+  "modId": "ecclientsettings",
+  "sections": [
+    "ec:ecclientsettings/hud",
+    "ec:ecclientsettings/hud/armor",
+    "ec:ecclientsettings/hud/cps",
+    "ec:ecclientsettings/hud/fps",
+    "ec:ecclientsettings/hud/keystrokes",
+    "ec:ecclientsettings/hud/ping",
+    "ec:ecclientsettings/hud/potions",
+    "ec:ecclientsettings/hud/speed",
+    "ec:ecclientsettings/hud/widget_count",
+    "ec:ecclientsettings/obs/capture_state",
+    "ec:ecclientsettings/obs/composite",
+    "ec:ecclientsettings/obs/depth_copy",
+    "ec:ecclientsettings/obs/gui",
+    "ec:ecclientsettings/obs/public_frame",
+    "ec:ecclientsettings/window_rpc_apply"
+  ],
+  "taskOperations": []
+}

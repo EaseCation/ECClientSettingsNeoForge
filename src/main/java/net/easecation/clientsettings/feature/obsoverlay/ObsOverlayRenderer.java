@@ -104,44 +104,50 @@ final class ObsOverlayRenderer implements AutoCloseable {
     }
 
     WorldGraphicsState captureWorldGraphicsState() {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer viewport = stack.mallocInt(4);
-            IntBuffer scissorBox = stack.mallocInt(4);
-            ByteBuffer colorMask = stack.malloc(4);
-            FloatBuffer clearColor = stack.mallocFloat(4);
-            DoubleBuffer clearDepth = stack.mallocDouble(1);
-            GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
-            GL11.glGetIntegerv(GL11.GL_SCISSOR_BOX, scissorBox);
-            GL11.glGetBooleanv(GL11.GL_COLOR_WRITEMASK, colorMask);
-            GL11.glGetFloatv(GL11.GL_COLOR_CLEAR_VALUE, clearColor);
-            GL11.glGetDoublev(GL11.GL_DEPTH_CLEAR_VALUE, clearDepth);
-            return new WorldGraphicsState(
-                    GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING),
-                    GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING),
-                    viewport.get(0), viewport.get(1), viewport.get(2), viewport.get(3),
-                    GL11.glIsEnabled(GL11.GL_SCISSOR_TEST),
-                    scissorBox.get(0), scissorBox.get(1), scissorBox.get(2), scissorBox.get(3),
-                    GL11.glIsEnabled(GL11.GL_DEPTH_TEST),
-                    GL11.glGetInteger(GL11.GL_DEPTH_FUNC),
-                    GL11.glIsEnabled(GL11.GL_BLEND),
-                    GL11.glGetInteger(GL14.GL_BLEND_SRC_RGB),
-                    GL11.glGetInteger(GL14.GL_BLEND_DST_RGB),
-                    GL11.glGetInteger(GL14.GL_BLEND_SRC_ALPHA),
-                    GL11.glGetInteger(GL14.GL_BLEND_DST_ALPHA),
-                    GL11.glIsEnabled(GL11.GL_CULL_FACE),
-                    GL11.glGetInteger(GL11.GL_POLYGON_MODE),
-                    GL11.glIsEnabled(GL11.GL_POLYGON_OFFSET_FILL),
-                    GL11.glGetFloat(GL11.GL_POLYGON_OFFSET_FACTOR),
-                    GL11.glGetFloat(GL11.GL_POLYGON_OFFSET_UNITS),
-                    GL11.glIsEnabled(GL11.GL_COLOR_LOGIC_OP),
-                    GL11.glGetInteger(GL11.GL_LOGIC_OP_MODE),
-                    GL11.glIsEnabled(GL11.GL_STENCIL_TEST),
-                    GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK),
-                    colorMask.get(0) != 0, colorMask.get(1) != 0,
-                    colorMask.get(2) != 0, colorMask.get(3) != 0,
-                    clearColor.get(0), clearColor.get(1), clearColor.get(2), clearColor.get(3),
-                    clearDepth.get(0)
-            );
+        var ecPerf = net.minecraft.util.profiling.Profiler.get();
+        ecPerf.push("ec:ecclientsettings/obs/capture_state");
+        try {
+            try (MemoryStack stack = MemoryStack.stackPush()) {
+                IntBuffer viewport = stack.mallocInt(4);
+                IntBuffer scissorBox = stack.mallocInt(4);
+                ByteBuffer colorMask = stack.malloc(4);
+                FloatBuffer clearColor = stack.mallocFloat(4);
+                DoubleBuffer clearDepth = stack.mallocDouble(1);
+                GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
+                GL11.glGetIntegerv(GL11.GL_SCISSOR_BOX, scissorBox);
+                GL11.glGetBooleanv(GL11.GL_COLOR_WRITEMASK, colorMask);
+                GL11.glGetFloatv(GL11.GL_COLOR_CLEAR_VALUE, clearColor);
+                GL11.glGetDoublev(GL11.GL_DEPTH_CLEAR_VALUE, clearDepth);
+                return new WorldGraphicsState(
+                        GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING),
+                        GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING),
+                        viewport.get(0), viewport.get(1), viewport.get(2), viewport.get(3),
+                        GL11.glIsEnabled(GL11.GL_SCISSOR_TEST),
+                        scissorBox.get(0), scissorBox.get(1), scissorBox.get(2), scissorBox.get(3),
+                        GL11.glIsEnabled(GL11.GL_DEPTH_TEST),
+                        GL11.glGetInteger(GL11.GL_DEPTH_FUNC),
+                        GL11.glIsEnabled(GL11.GL_BLEND),
+                        GL11.glGetInteger(GL14.GL_BLEND_SRC_RGB),
+                        GL11.glGetInteger(GL14.GL_BLEND_DST_RGB),
+                        GL11.glGetInteger(GL14.GL_BLEND_SRC_ALPHA),
+                        GL11.glGetInteger(GL14.GL_BLEND_DST_ALPHA),
+                        GL11.glIsEnabled(GL11.GL_CULL_FACE),
+                        GL11.glGetInteger(GL11.GL_POLYGON_MODE),
+                        GL11.glIsEnabled(GL11.GL_POLYGON_OFFSET_FILL),
+                        GL11.glGetFloat(GL11.GL_POLYGON_OFFSET_FACTOR),
+                        GL11.glGetFloat(GL11.GL_POLYGON_OFFSET_UNITS),
+                        GL11.glIsEnabled(GL11.GL_COLOR_LOGIC_OP),
+                        GL11.glGetInteger(GL11.GL_LOGIC_OP_MODE),
+                        GL11.glIsEnabled(GL11.GL_STENCIL_TEST),
+                        GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK),
+                        colorMask.get(0) != 0, colorMask.get(1) != 0,
+                        colorMask.get(2) != 0, colorMask.get(3) != 0,
+                        clearColor.get(0), clearColor.get(1), clearColor.get(2), clearColor.get(3),
+                        clearDepth.get(0)
+                );
+            }
+        } finally {
+            ecPerf.pop();
         }
     }
 
@@ -235,39 +241,51 @@ final class ObsOverlayRenderer implements AutoCloseable {
     }
 
     void renderGui(GpuBufferSlice fogBuffer) {
-        if (guiDirty) {
-            overlayGuiRenderer.render(fogBuffer);
-            overlayGuiRenderer.incrementFrameNumber();
-        } else {
-            overlayGuiState.reset();
+        var ecPerf = net.minecraft.util.profiling.Profiler.get();
+        ecPerf.push("ec:ecclientsettings/obs/gui");
+        try {
+            if (guiDirty) {
+                overlayGuiRenderer.render(fogBuffer);
+                overlayGuiRenderer.incrementFrameNumber();
+            } else {
+                overlayGuiState.reset();
+            }
+        } finally {
+            ecPerf.pop();
         }
     }
 
     void backupSceneDepth() {
-        if (!worldDirty && !publicAliasDirty) {
-            return;
-        }
-        RenderTarget mainTarget = minecraft.getMainRenderTarget();
-        GpuTextureView source = mainTarget.getDepthTextureView();
-        if (source == null) {
-            return;
-        }
-        ensureSceneDepthTexture(source);
+        var ecPerf = net.minecraft.util.profiling.Profiler.get();
+        ecPerf.push("ec:ecclientsettings/obs/depth_copy");
         try {
-            RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(
-                    source.texture(),
-                    sceneDepthTexture,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    source.getWidth(0),
-                    source.getHeight(0)
-            );
-            sceneDepthReady = true;
-        } catch (RuntimeException exception) {
-            warnDepthCopyFailure(exception);
+            if (!worldDirty && !publicAliasDirty) {
+                return;
+            }
+            RenderTarget mainTarget = minecraft.getMainRenderTarget();
+            GpuTextureView source = mainTarget.getDepthTextureView();
+            if (source == null) {
+                return;
+            }
+            ensureSceneDepthTexture(source);
+            try {
+                RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(
+                        source.texture(),
+                        sceneDepthTexture,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        source.getWidth(0),
+                        source.getHeight(0)
+                );
+                sceneDepthReady = true;
+            } catch (RuntimeException exception) {
+                warnDepthCopyFailure(exception);
+            }
+        } finally {
+            ecPerf.pop();
         }
     }
 
@@ -276,68 +294,80 @@ final class ObsOverlayRenderer implements AutoCloseable {
     }
 
     boolean preparePublicFrame() {
-        int width = minecraft.getWindow().getWidth();
-        int height = minecraft.getWindow().getHeight();
-        if (width <= 0 || height <= 0) {
-            publicFramePrepared = false;
-            publicAliasPresented = false;
-            return false;
+        var ecPerf = net.minecraft.util.profiling.Profiler.get();
+        ecPerf.push("ec:ecclientsettings/obs/public_frame");
+        try {
+            int width = minecraft.getWindow().getWidth();
+            int height = minecraft.getWindow().getHeight();
+            if (width <= 0 || height <= 0) {
+                publicFramePrepared = false;
+                publicAliasPresented = false;
+                return false;
+            }
+            boolean aliasDrawn = publicAliasDirty;
+            // Every swap starts from a known clean frame. This also covers minimized frames and the
+            // recursive second swap performed while toggling fullscreen.
+            publicAliasPresented = true;
+            compositor.restoreAndComposite(
+                    minecraft.getMainRenderTarget(),
+                    true,
+                    sceneDepthReady ? sceneDepthTexture : null,
+                    publicAliasTarget,
+                    aliasDrawn,
+                    guiTarget,
+                    false,
+                    width,
+                    height
+            );
+            publicFramePrepared = true;
+            // A successful clean-only replace needs no second restore after OBS capture. On an
+            // exception the earlier true value forces the native callback to scrub the buffer again.
+            publicAliasPresented = aliasDrawn;
+            return true;
+        } finally {
+            ecPerf.pop();
         }
-        boolean aliasDrawn = publicAliasDirty;
-        // Every swap starts from a known clean frame. This also covers minimized frames and the
-        // recursive second swap performed while toggling fullscreen.
-        publicAliasPresented = true;
-        compositor.restoreAndComposite(
-                minecraft.getMainRenderTarget(),
-                true,
-                sceneDepthReady ? sceneDepthTexture : null,
-                publicAliasTarget,
-                aliasDrawn,
-                guiTarget,
-                false,
-                width,
-                height
-        );
-        publicFramePrepared = true;
-        // A successful clean-only replace needs no second restore after OBS capture. On an
-        // exception the earlier true value forces the native callback to scrub the buffer again.
-        publicAliasPresented = aliasDrawn;
-        return true;
     }
 
     boolean composite(boolean allowPrivateOverlays) {
-        boolean prepared = publicFramePrepared;
-        boolean restorePublicAlias = publicAliasPresented;
-        publicFramePrepared = false;
-        publicAliasPresented = false;
-        if (!allowPrivateOverlays || !prepared) {
-            if (restorePublicAlias || allowPrivateOverlays) {
-                compositor.restoreAndComposite(
-                        minecraft.getMainRenderTarget(),
-                        true,
-                        null,
-                        worldTarget,
-                        false,
-                        guiTarget,
-                        false,
-                        minecraft.getWindow().getWidth(),
-                        minecraft.getWindow().getHeight()
-                );
+        var ecPerf = net.minecraft.util.profiling.Profiler.get();
+        ecPerf.push("ec:ecclientsettings/obs/composite");
+        try {
+            boolean prepared = publicFramePrepared;
+            boolean restorePublicAlias = publicAliasPresented;
+            publicFramePrepared = false;
+            publicAliasPresented = false;
+            if (!allowPrivateOverlays || !prepared) {
+                if (restorePublicAlias || allowPrivateOverlays) {
+                    compositor.restoreAndComposite(
+                            minecraft.getMainRenderTarget(),
+                            true,
+                            null,
+                            worldTarget,
+                            false,
+                            guiTarget,
+                            false,
+                            minecraft.getWindow().getWidth(),
+                            minecraft.getWindow().getHeight()
+                    );
+                }
+                return prepared;
             }
-            return prepared;
+            compositor.restoreAndComposite(
+                    minecraft.getMainRenderTarget(),
+                    restorePublicAlias,
+                    sceneDepthReady ? sceneDepthTexture : null,
+                    worldTarget,
+                    worldDirty,
+                    guiTarget,
+                    guiDirty,
+                    minecraft.getWindow().getWidth(),
+                    minecraft.getWindow().getHeight()
+            );
+            return true;
+        } finally {
+            ecPerf.pop();
         }
-        compositor.restoreAndComposite(
-                minecraft.getMainRenderTarget(),
-                restorePublicAlias,
-                sceneDepthReady ? sceneDepthTexture : null,
-                worldTarget,
-                worldDirty,
-                guiTarget,
-                guiDirty,
-                minecraft.getWindow().getWidth(),
-                minecraft.getWindow().getHeight()
-        );
-        return true;
     }
 
     private boolean copyDepthIfCompatible(GpuTextureView sourceView, RenderTarget destination) {

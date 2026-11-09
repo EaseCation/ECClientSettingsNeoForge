@@ -119,32 +119,38 @@ public final class HudRenderer {
     }
 
     private static void renderLayer(GuiGraphics graphics, DeltaTracker deltaTracker) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.options.hideGui
-                || minecraft.player == null
-                || minecraft.level == null
-                || minecraft.screen instanceof HudEditorScreen) {
-            return;
-        }
-
-        ObsOverlayRuntime.beginComponent(ObsOverlayComponent.EC_HUD);
+        var ecPerf = net.minecraft.util.profiling.Profiler.get();
+        ecPerf.push("ec:ecclientsettings/hud");
         try {
-            HudSettings settings = ProfileServices.active().features().hud();
-            HudRenderContext context = new HudRenderContext(
-                    minecraft,
-                    graphics,
-                    HudRenderMode.LIVE,
-                    deltaTracker.getGameTimeDeltaPartialTick(false),
-                    settings
-            );
-            for (HudWidget widget : HudWidgetRegistry.widgets()) {
-                HudWidgetSettings widgetSettings = settings.widget(widget.id());
-                if (widgetSettings.enabled() && widget.shouldRender(context)) {
-                    renderWidget(context, widget, widgetSettings, graphics.guiWidth(), graphics.guiHeight());
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft.options.hideGui
+                    || minecraft.player == null
+                    || minecraft.level == null
+                    || minecraft.screen instanceof HudEditorScreen) {
+                return;
+            }
+
+            ObsOverlayRuntime.beginComponent(ObsOverlayComponent.EC_HUD);
+            try {
+                HudSettings settings = ProfileServices.active().features().hud();
+                HudRenderContext context = new HudRenderContext(
+                        minecraft,
+                        graphics,
+                        HudRenderMode.LIVE,
+                        deltaTracker.getGameTimeDeltaPartialTick(false),
+                        settings
+                );
+                for (HudWidget widget : HudWidgetRegistry.widgets()) {
+                    HudWidgetSettings widgetSettings = settings.widget(widget.id());
+                    if (widgetSettings.enabled() && widget.shouldRender(context)) {
+                        renderWidget(context, widget, widgetSettings, graphics.guiWidth(), graphics.guiHeight());
+                    }
                 }
+            } finally {
+                ObsOverlayRuntime.endComponent();
             }
         } finally {
-            ObsOverlayRuntime.endComponent();
+            ecPerf.pop();
         }
     }
 
@@ -155,6 +161,18 @@ public final class HudRenderer {
             int viewportWidth,
             int viewportHeight
     ) {
+        var attributionProfiler = net.minecraft.util.profiling.Profiler.get();
+        attributionProfiler.push(switch(widget.id()) {
+            case ARMOR -> "ec:ecclientsettings/hud/armor";
+            case POTIONS -> "ec:ecclientsettings/hud/potions";
+            case PING -> "ec:ecclientsettings/hud/ping";
+            case FPS -> "ec:ecclientsettings/hud/fps";
+            case LEFT_CPS,RIGHT_CPS,COMBINED_CPS -> "ec:ecclientsettings/hud/cps";
+            case KEYSTROKES -> "ec:ecclientsettings/hud/keystrokes";
+            case SPEED -> "ec:ecclientsettings/hud/speed";
+        });
+        attributionProfiler.incrementCounter("ec:ecclientsettings/hud/widget_count");
+        try {
         HudRenderContext widgetContext = context.withStyle(settings.style());
         HudSize contentSize = context.preview()
                 ? widget.previewSize(context.hudSettings())
@@ -178,5 +196,7 @@ public final class HudRenderer {
             context.graphics().pose().popMatrix();
         }
         return bounds;
+
+        } finally { attributionProfiler.pop(); }
     }
 }
