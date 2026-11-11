@@ -492,5 +492,8 @@
   "option.ecclientsettings.potions.vanillaPreview": "Vanilla effects preview",
   "option.ecclientsettings.potions.vanillaHidden": "Vanilla effect icons hidden",
   "option.ecclientsettings.potions.warningEnabled.tooltip": "Controls expiry flashing in both vanilla icons and the EC list. Disabling this also stops vanilla expiry flashing. Infinite effects never trigger a warning.",
-  "option.ecclientsettings.potions.warningSeconds.tooltip": "Flash when the remaining time is below this number of seconds. Vanilla icons and the EC list share this threshold."
+  "option.ecclientsettings.potions.warningSeconds.tooltip": "Flash when the remaining time is below this number of seconds. Vanilla icons and the EC list share this threshold.",
+  "ecclientsettings.chat.filter_unavailable": "Chat filtering is unavailable or overloaded. Some messages were not shown.",
+  "ecclientsettings.chat.filter_pending": "Checking block status…",
+  "ecclientsettings.chat.filter_failed": "Block status unavailable"
 }

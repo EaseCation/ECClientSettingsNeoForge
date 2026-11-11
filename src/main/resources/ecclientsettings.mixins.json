@@ -18,7 +18,12 @@
     "render.ItemEntityRenderStateMixin",
     "render.ItemEntityRendererMixin",
     "render.HeldItemInfoGuiMixin",
-    "render.PotionEffectsGuiMixin"
+    "render.PotionEffectsGuiMixin",
+    "chat.PlayerSocialManagerMixin",
+    "chat.ChatListenerMixin",
+    "chat.PlayerEntryMixin",
+    "chat.SocialInteractionsScreenMixin",
+    "chat.SocialInteractionsPlayerListMixin"
   ],
   "injectors": {
     "defaultRequire": 1

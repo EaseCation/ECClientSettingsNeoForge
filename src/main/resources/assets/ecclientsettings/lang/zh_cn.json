@@ -492,5 +492,8 @@
   "option.ecclientsettings.potions.vanillaPreview": "原版效果栏实时预览",
   "option.ecclientsettings.potions.vanillaHidden": "原版效果栏已隐藏",
   "option.ecclientsettings.potions.warningEnabled.tooltip": "同时控制原版效果栏和 EC 药水列表的到期闪烁。关闭后原版自带的到期闪烁也会停止；无限时长效果不触发警告。",
-  "option.ecclientsettings.potions.warningSeconds.tooltip": "当剩余时间低于此秒数时闪烁，原版效果栏与 EC 列表共用该阈值。"
+  "option.ecclientsettings.potions.warningSeconds.tooltip": "当剩余时间低于此秒数时闪烁，原版效果栏与 EC 列表共用该阈值。",
+  "ecclientsettings.chat.filter_unavailable": "聊天屏蔽检查暂不可用或消息过多，部分消息未显示。",
+  "ecclientsettings.chat.filter_pending": "正在查询屏蔽状态…",
+  "ecclientsettings.chat.filter_failed": "屏蔽状态暂不可用"
 }
