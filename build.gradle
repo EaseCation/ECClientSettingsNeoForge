@@ -7,6 +7,18 @@ version = mod_version
 group = mod_group_id
 
 repositories {
+    // EaseCation private repository (Aliyun Yunxiao Packages), only for net.easecation.* coordinates.
+    // Credentials: yunxiaoMavenUsername / yunxiaoMavenPassword in ~/.gradle/gradle.properties.
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'yunxiaoMaven'
+                url = 'https://easecation-cn-hangzhou.devops.aliyuncs.com/packages/api/protocol/maven/14075-release-h64s7e'
+                credentials(PasswordCredentials)
+            }
+        }
+        filter { includeGroupByRegex 'net\\.easecation(\\..*)?' }
+    }
     maven { url = 'https://maven.shedaniel.me/' }
     maven { url = 'https://libraries.minecraft.net/' }
     mavenCentral()
@@ -19,12 +31,12 @@ base {
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 dependencies {
-    implementation "net.easecation:easecation-async-logging:1.0.0"
-    jarJar "net.easecation:easecation-async-logging:1.0.0"
+    implementation "net.easecation:easecation-async-logging:1.0.1"
+    jarJar "net.easecation:easecation-async-logging:1.0.1"
     implementation "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}"
-    implementation "net.easecation:netease-bridge-client-neoforge:1.0.0"
-    implementation "net.easecation:netease-bridge-client-common:1.0.0"
-    implementation "org.oryxel.viabedrockutility:viabedrockutility:1.0.0"
+    implementation "net.easecation:netease-bridge-client-neoforge:1.0.1"
+    implementation "net.easecation:netease-bridge-client-common:1.0.1"
+    implementation "net.easecation.fork.oryxel.viabedrockutility:viabedrockutility:1.0.0-ec.1"
     implementation "org.msgpack:msgpack-core:0.9.8"
 
     testImplementation platform('org.junit:junit-bom:5.12.2')
@@ -90,5 +102,5 @@ tasks.named('test') {
 
 // ModDev creates this configuration when unitTest is enabled above.
 dependencies {
-    additionalRuntimeClasspath "net.easecation:easecation-async-logging:1.0.0"
+    additionalRuntimeClasspath "net.easecation:easecation-async-logging:1.0.1"
 }
